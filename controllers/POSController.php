@@ -184,12 +184,12 @@ class POSController {
     public function addToCart($data) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             // Validate input
             if (empty($data['thuoc_id']) || empty($data['donvi_id']) || empty($data['gia']) || empty($data['soluong'])) {
-                throw new Exception('Thieu thong tin san pham');
+                throw new Exception('Thiếu thông tin sản phẩm');
             }
 
             $thuocId = (int)$data['thuoc_id'];
@@ -200,7 +200,7 @@ class POSController {
             // Check stock
             $stockCheck = $this->checkStock($thuocId, $donviId);
             if (!$stockCheck['success'] || $stockCheck['data']['total_stock'] < $soluong) {
-                throw new Exception('Khong du hang trong kho');
+                throw new Exception('Không đủ hàng trong kho');
             }
 
             // Get cart reference
@@ -215,7 +215,7 @@ class POSController {
 
                 // Recheck stock with new quantity
                 if ($stockCheck['data']['total_stock'] < $newQuantity) {
-                    throw new Exception('Khong du hang trong kho');
+                    throw new Exception('Không đủ hàng trong kho');
                 }
 
                 $cart['items'][$key]['soluong'] = $newQuantity;
@@ -256,14 +256,14 @@ class POSController {
     public function updateCartQuantity($key, $quantity) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $quantity = max(1, (int)$quantity);
             $cart = &$this->getPOSCart();
 
             if (!isset($cart['items'][$key])) {
-                throw new Exception('San pham khong ton tai trong gio hang');
+                throw new Exception('Sản phẩm không tồn tại trong giỏ hàng');
             }
 
             // Check stock
@@ -271,7 +271,7 @@ class POSController {
             $stockCheck = $this->checkStock($item['thuoc_id'], $item['donvi_id']);
 
             if (!$stockCheck['success'] || $stockCheck['data']['total_stock'] < $quantity) {
-                throw new Exception('Khong du hang trong kho');
+                throw new Exception('Không đủ hàng trong kho');
             }
 
             // Update quantity and recalculate
@@ -298,13 +298,13 @@ class POSController {
     public function removeFromCart($key) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $cart = &$this->getPOSCart();
 
             if (!isset($cart['items'][$key])) {
-                throw new Exception('San pham khong ton tai trong gio hang');
+                throw new Exception('Sản phẩm không tồn tại trong giỏ hàng');
             }
 
             unset($cart['items'][$key]);
@@ -329,7 +329,7 @@ class POSController {
     public function clearCart() {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $userId = $_SESSION['user_id'];
@@ -363,13 +363,13 @@ class POSController {
     public function applyDiscount($discountData) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $cart = &$this->getPOSCart();
 
             if (empty($cart['items'])) {
-                throw new Exception('Gio hang trong');
+                throw new Exception('Giỏ hàng trống');
             }
 
             $discountType = $discountData['type'] ?? null;
@@ -389,13 +389,13 @@ class POSController {
                 $promotion = $this->promotionModel->getPromotionByCode($promotionCode);
 
                 if (!$promotion) {
-                    throw new Exception('Ma khuyen mai khong hop le');
+                    throw new Exception('Mã khuyến mãi không hợp lệ');
                 }
 
                 $discountAmount = $this->promotionModel->calculateDiscount($promotion['id'], $subtotal);
 
                 if ($discountAmount <= 0) {
-                    throw new Exception('Don hang khong du dieu kien ap dung khuyen mai');
+                    throw new Exception('Đơn hàng không đủ điều kiện áp dụng khuyến mãi');
                 }
 
                 $cart['discount'] = [
@@ -412,16 +412,16 @@ class POSController {
 
                 if ($discountType === 'percentage') {
                     if ($discountValue < 0 || $discountValue > 100) {
-                        throw new Exception('Giam gia phai tu 0% den 100%');
+                        throw new Exception('Giảm giá phải từ 0% đến 100%');
                     }
                     $discountAmount = ($subtotal * $discountValue) / 100;
 
                 } elseif ($discountType === 'fixed') {
                     if ($discountValue < 0) {
-                        throw new Exception('So tien giam khong hop le');
+                        throw new Exception('Số tiền giảm không hợp lệ');
                     }
                     if ($discountValue > $subtotal) {
-                        throw new Exception('So tien giam khong duoc lon hon tong tien hang');
+                        throw new Exception('Số tiền giảm không được lớn hơn tổng tiền hàng');
                     }
                     $discountAmount = $discountValue;
                 }
@@ -455,7 +455,7 @@ class POSController {
     public function removeDiscount() {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $cart = &$this->getPOSCart();
@@ -491,14 +491,14 @@ class POSController {
     public function holdBill($billName = null) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $userId = $_SESSION['user_id'];
             $cart = &$this->getPOSCart();
 
             if (empty($cart['items'])) {
-                throw new Exception('Gio hang trong');
+                throw new Exception('Giỏ hàng trống');
             }
 
             // Check if user has active session (optional - skip for admin)
@@ -561,7 +561,7 @@ class POSController {
     public function getHeldBills() {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $userId = $_SESSION['user_id'];
@@ -588,13 +588,13 @@ class POSController {
     public function retrieveHeldBill($heldBillId) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             // Get held bill details
             $heldBill = $this->heldBillModel->getHeldBillById($heldBillId);
             if (!$heldBill) {
-                throw new Exception('Hoa don tam giu khong ton tai');
+                throw new Exception('Hóa đơn tạm giữ không tồn tại');
             }
 
             // Get items
@@ -652,14 +652,14 @@ class POSController {
     public function processPayment($paymentData) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $userId = $_SESSION['user_id'];
             $cart = &$this->getPOSCart();
 
             if (empty($cart['items'])) {
-                throw new Exception('Gio hang trong');
+                throw new Exception('Giỏ hàng trống');
             }
 
             // Check active session (optional - skip for admin)
@@ -894,7 +894,7 @@ class POSController {
     public function setCustomer($customerId) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $cart = &$this->getPOSCart();
@@ -917,7 +917,7 @@ class POSController {
     public function setNotes($notes) {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             $cart = &$this->getPOSCart();
@@ -940,7 +940,7 @@ class POSController {
     public function getCurrentCart() {
         try {
             if (!isset($_SESSION['user_id'])) {
-                throw new Exception('Ban chua dang nhap');
+                throw new Exception('Bạn chưa đăng nhập');
             }
 
             return [

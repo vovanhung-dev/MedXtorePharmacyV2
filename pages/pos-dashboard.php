@@ -214,7 +214,7 @@ $pageTitle = "POS - Bán hàng tại quầy";
                         <div class="active-promotions">
                             <label class="form-label small text-muted">Khuyến mãi đang chạy:</label>
                             <?php foreach (array_slice($activePromotions, 0, 3) as $promo): ?>
-                                <div class="promo-tag" onclick="applyPromotionCode('<?php echo htmlspecialchars($promo['code'] ?? ''); ?>')">
+                                <div class="promo-tag" onclick="applyPromotionWithCheck(<?php echo htmlspecialchars(json_encode($promo)); ?>)">
                                     <i class="bi bi-gift"></i>
                                     <span><?php echo htmlspecialchars($promo['name']); ?></span>
                                     <small>
@@ -435,6 +435,507 @@ $pageTitle = "POS - Bán hàng tại quầy";
     <script src="../assets/js/pos.js?v=<?php echo time(); ?>"></script>
 
     <script>
+        // Manual Discount Functions (defined here to ensure availability)
+        function updateDiscountPreview() {
+            const discountType = document.getElementById('discountType')?.value;
+            const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
+            const previewDiv = document.getElementById('discountPreview');
+            const previewText = document.getElementById('discountPreviewText');
+
+            if (!previewDiv || !previewText) return;
+
+            // Get current cart total from the display
+            const totalText = document.getElementById('cartTotal')?.textContent || '0';
+            const cartSubtotal = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+
+            if (discountValue <= 0 || cartSubtotal <= 0) {
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            let discountAmount = 0;
+            let previewMessage = '';
+
+            if (discountType === 'percentage') {
+                if (discountValue > 100) {
+                    previewDiv.className = 'alert alert-danger small';
+                    previewText.textContent = 'Giảm giá không được vượt quá 100%';
+                    previewDiv.style.display = 'block';
+                    return;
+                }
+                discountAmount = (cartSubtotal * discountValue) / 100;
+                previewMessage = `Giảm ${discountValue}% = ${formatCurrency(discountAmount)}`;
+            } else {
+                if (discountValue > cartSubtotal) {
+                    previewDiv.className = 'alert alert-danger small';
+                    previewText.textContent = 'Số tiền giảm không được lớn hơn tổng tiền hàng';
+                    previewDiv.style.display = 'block';
+                    return;
+                }
+                discountAmount = discountValue;
+                previewMessage = `Giảm ${formatCurrency(discountAmount)}`;
+            }
+
+            const finalTotal = cartSubtotal - discountAmount;
+            previewMessage += ` | Còn lại: ${formatCurrency(finalTotal)}`;
+
+            previewDiv.className = 'alert alert-info small';
+            previewText.textContent = previewMessage;
+            previewDiv.style.display = 'block';
+        }
+
+        function applyManualDiscount() {
+            console.log('Applying manual discount...');
+
+            const discountType = document.getElementById('discountType')?.value;
+            const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
+            const discountReason = document.getElementById('discountReason')?.value.trim();
+
+            if (discountValue <= 0) {
+                showNotification('Vui lòng nhập giá trị giảm giá', 'warning');
+                return;
+            }
+
+            // Get current cart total
+            const totalText = document.getElementById('cartTotal')?.textContent || '0';
+            const cartSubtotal = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+
+            if (cartSubtotal <= 0) {
+                showNotification('Giỏ hàng trống', 'warning');
+                return;
+            }
+
+            if (discountType === 'percentage' && (discountValue < 0 || discountValue > 100)) {
+                showNotification('Giảm giá phải từ 0% đến 100%', 'error');
+                return;
+            }
+
+            if (discountType === 'fixed' && discountValue > cartSubtotal) {
+                showNotification('Số tiền giảm không được lớn hơn tổng tiền hàng', 'error');
+                return;
+            }
+
+            const applyBtn = document.getElementById('applyDiscountBtn');
+            if (applyBtn) {
+                applyBtn.disabled = true;
+                applyBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang áp dụng...';
+            }
+
+            fetch('/api/pos/discount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'apply_manual',
+                    type: discountType,
+                    value: discountValue,
+                    reason: discountReason || 'Giảm giá trực tiếp'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof updateCartFromServer === 'function') {
+                        updateCartFromServer();
+                    } else {
+                        location.reload();
+                    }
+
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('manualDiscountModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    document.getElementById('discountValue').value = '';
+                    document.getElementById('discountReason').value = '';
+
+                    const discountText = discountType === 'percentage'
+                        ? `${discountValue}%`
+                        : `${formatCurrency(discountValue)}`;
+                    showNotification(`Đã áp dụng giảm giá ${discountText}`, 'success');
+                } else {
+                    showNotification(data.message || 'Lỗi áp dụng giảm giá', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Apply discount error:', error);
+                showNotification('Lỗi kết nối: ' + error.message, 'error');
+            })
+            .finally(() => {
+                if (applyBtn) {
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Áp dụng';
+                }
+            });
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        function showNotification(message, type) {
+            // Simple notification using alert for now
+            // You can enhance this with a better UI
+            if (typeof window.POSSystem !== 'undefined' && typeof window.POSSystem.showNotification === 'function') {
+                window.POSSystem.showNotification(message, type);
+            } else {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                if (type === 'error') {
+                    alert(message);
+                }
+            }
+        }
+
+        function clearDiscount() {
+            console.log('clearDiscount() called');
+
+            if (!confirm('Bạn có chắc muốn xóa mã giảm giá đang áp dụng?')) {
+                return;
+            }
+
+            fetch('/api/pos/discount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'remove_discount'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (typeof updateCartFromServer === 'function') {
+                        updateCartFromServer();
+                    } else {
+                        location.reload();
+                    }
+                    showNotification('Đã xóa mã giảm giá', 'success');
+
+                    // Clear voucher input if exists
+                    const voucherInput = document.getElementById('voucherCode');
+                    if (voucherInput) {
+                        voucherInput.value = '';
+                    }
+                } else {
+                    showNotification(data.message || 'Lỗi xóa mã giảm giá', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Clear discount error:', error);
+                showNotification('Lỗi kết nối: ' + error.message, 'error');
+            });
+        }
+
+        function applyVoucher() {
+            console.log('applyVoucher() called');
+
+            const voucherInput = document.getElementById('voucherCode');
+            const code = voucherInput ? voucherInput.value.trim() : '';
+
+            console.log('Voucher code:', code);
+
+            if (!code) {
+                alert('⚠️ Vui lòng nhập mã voucher');
+                return;
+            }
+
+            // Get current cart total to check conditions
+            const totalText = document.getElementById('cartSubtotal')?.textContent ||
+                             document.getElementById('cartTotal')?.textContent || '0';
+            const cartTotal = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+
+            if (cartTotal <= 0) {
+                alert('⚠️ Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi áp dụng mã.');
+                return;
+            }
+
+            console.log('Applying voucher:', code);
+
+            // Disable button and show loading
+            const applyBtn = voucherInput.nextElementSibling;
+            if (applyBtn) {
+                applyBtn.disabled = true;
+                applyBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang xử lý...';
+            }
+
+            fetch('/api/pos/discount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'apply_promotion',
+                    promotion_code: code
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Apply voucher response:', data);
+
+                if (data.success) {
+                    console.log('Voucher applied successfully');
+                    if (typeof updateCartFromServer === 'function') {
+                        updateCartFromServer();
+                    } else {
+                        location.reload();
+                    }
+                    showNotification('✅ Đã áp dụng mã khuyến mãi: ' + code, 'success');
+
+                    // Clear input after successful application
+                    voucherInput.value = '';
+                } else {
+                    console.error('Failed to apply voucher:', data.message);
+                    alert('❌ ' + (data.message || 'Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện'));
+                }
+            })
+            .catch(error => {
+                console.error('Apply voucher error:', error);
+                alert('❌ Lỗi kết nối: ' + error.message);
+            })
+            .finally(() => {
+                // Re-enable button
+                if (applyBtn) {
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Áp dụng';
+                }
+            });
+        }
+
+        function applyPromotionWithCheck(promotion) {
+            console.log('applyPromotionWithCheck() called with:', promotion);
+
+            if (!promotion || !promotion.code) {
+                alert('Thông tin khuyến mãi không hợp lệ');
+                return;
+            }
+
+            // Get current cart total
+            const totalText = document.getElementById('cartSubtotal')?.textContent ||
+                             document.getElementById('cartTotal')?.textContent || '0';
+            const cartTotal = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+
+            console.log('Cart total:', cartTotal);
+            console.log('Promotion:', promotion);
+
+            // Check minimum order amount
+            const minAmount = parseFloat(promotion.min_order_amount || promotion.minimum_order_amount || 0);
+
+            if (minAmount > 0 && cartTotal < minAmount) {
+                const formattedMin = formatCurrency(minAmount);
+                const formattedCurrent = formatCurrency(cartTotal);
+
+                alert(
+                    `❌ Không đủ điều kiện áp dụng khuyến mãi "${promotion.name}"\n\n` +
+                    `Yêu cầu: Tổng đơn hàng tối thiểu ${formattedMin}\n` +
+                    `Hiện tại: ${formattedCurrent}\n\n` +
+                    `Vui lòng thêm ${formatCurrency(minAmount - cartTotal)} nữa để sử dụng mã này.`
+                );
+                return;
+            }
+
+            // Check if cart is empty
+            if (cartTotal <= 0) {
+                alert('⚠️ Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi áp dụng mã khuyến mãi.');
+                return;
+            }
+
+            // Fill voucher code into input
+            const voucherInput = document.getElementById('voucherCode');
+            if (voucherInput) {
+                voucherInput.value = promotion.code;
+                voucherInput.focus();
+
+                // Show notification with promotion details
+                let discountText = '';
+                if (promotion.type === 'percentage') {
+                    discountText = `giảm ${promotion.discount_value}%`;
+                } else {
+                    discountText = `giảm ${formatCurrency(promotion.discount_value)}`;
+                }
+
+                showNotification(
+                    `✅ Đã điền mã "${promotion.code}" (${discountText}). Nhấn "Áp dụng" để sử dụng.`,
+                    'success'
+                );
+            } else {
+                console.error('Voucher input not found');
+                alert('Không tìm thấy ô nhập mã voucher');
+            }
+        }
+
+        function proceedToPayment() {
+            console.log('💳 proceedToPayment() called');
+
+            // Check if cart has items
+            const cartItems = document.querySelectorAll('#cartItems .cart-item');
+            if (cartItems.length === 0) {
+                showNotification('⚠️ Giỏ hàng trống', 'warning');
+                return;
+            }
+
+            // Open payment modal
+            const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            paymentModal.show();
+
+            // Show cash payment form by default
+            setTimeout(() => {
+                showCashPaymentForm();
+            }, 100);
+        }
+
+        function showCashPaymentForm() {
+            const totalText = document.getElementById('cartTotal')?.textContent || '0đ';
+            const total = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+            const paymentDetails = document.getElementById('paymentDetails');
+
+            if (!paymentDetails) return;
+
+            paymentDetails.innerHTML = `
+                <div class="cash-payment-form">
+                    <div class="mb-3">
+                        <label class="form-label">Tổng tiền phải trả:</label>
+                        <div class="alert alert-info fw-bold fs-4">${formatCurrency(total)}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tiền khách đưa:</label>
+                        <input type="number"
+                               class="form-control form-control-lg"
+                               id="cashReceived"
+                               placeholder="Nhập số tiền..."
+                               min="${total}"
+                               value="${total}"
+                               oninput="calculateCashChange()">
+                    </div>
+
+                    <div class="quick-amount-buttons mb-3">
+                        <button class="btn btn-outline-primary btn-sm" onclick="setCashAmount(${Math.ceil(total / 1000) * 1000})">
+                            ${formatCurrency(Math.ceil(total / 1000) * 1000)}
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="setCashAmount(${Math.ceil(total / 10000) * 10000})">
+                            ${formatCurrency(Math.ceil(total / 10000) * 10000)}
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="setCashAmount(${Math.ceil(total / 50000) * 50000})">
+                            ${formatCurrency(Math.ceil(total / 50000) * 50000)}
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tiền thối:</label>
+                        <div class="alert alert-success fw-bold" id="changeAmount">0đ</div>
+                    </div>
+                </div>
+            `;
+
+            // Auto calculate change
+            calculateCashChange();
+
+            // Enable confirm button
+            const confirmBtn = document.getElementById('confirmPaymentBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+            }
+        }
+
+        function setCashAmount(amount) {
+            const cashInput = document.getElementById('cashReceived');
+            if (cashInput) {
+                cashInput.value = amount;
+                calculateCashChange();
+            }
+        }
+
+        function calculateCashChange() {
+            const totalText = document.getElementById('cartTotal')?.textContent || '0đ';
+            const total = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+            const cashInput = document.getElementById('cashReceived');
+            const changeDisplay = document.getElementById('changeAmount');
+            const confirmBtn = document.getElementById('confirmPaymentBtn');
+
+            if (!cashInput || !changeDisplay) return;
+
+            const received = parseFloat(cashInput.value) || 0;
+            const change = received - total;
+
+            if (change >= 0) {
+                changeDisplay.textContent = formatCurrency(change);
+                changeDisplay.className = 'alert alert-success fw-bold';
+                if (confirmBtn) confirmBtn.disabled = false;
+            } else {
+                changeDisplay.textContent = 'Chưa đủ tiền';
+                changeDisplay.className = 'alert alert-danger fw-bold';
+                if (confirmBtn) confirmBtn.disabled = true;
+            }
+        }
+
+        function confirmPayment() {
+            const cashInput = document.getElementById('cashReceived');
+            const totalText = document.getElementById('cartTotal')?.textContent || '0đ';
+            const total = parseFloat(totalText.replace(/[^\d]/g, '')) || 0;
+            const received = cashInput ? parseFloat(cashInput.value) || 0 : 0;
+
+            if (received < total) {
+                showNotification('⚠️ Số tiền khách đưa chưa đủ', 'warning');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmPaymentBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang xử lý...';
+            }
+
+            // Process payment via API
+            fetch('/api/pos/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'process',
+                    payment_method: 'cash',
+                    cash_received: received
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('✅ Thanh toán thành công!', 'success');
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                    if (modal) modal.hide();
+
+                    // Reload page to clear cart
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showNotification('❌ ' + (data.message || 'Lỗi thanh toán'), 'error');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = '<i class="bi bi-check-circle"></i> Xác nhận thanh toán';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Payment error:', error);
+                showNotification('❌ Lỗi kết nối: ' + error.message, 'error');
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="bi bi-check-circle"></i> Xác nhận thanh toán';
+                }
+            });
+        }
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             loadProducts();
