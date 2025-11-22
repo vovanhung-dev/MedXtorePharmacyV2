@@ -71,4 +71,49 @@ class Inventory {
             $insert->execute([$thuoc_id, $donvi_id, $gia_ban]);
         }
     }
+
+    // ✅ 7. Lấy danh sách thuốc gần hết (số lượng dưới ngưỡng)
+    public function getLowStockItems($threshold = 20) {
+        $query = "SELECT
+                    k.thuoc_id,
+                    t.ten_thuoc,
+                    dv.ten_donvi,
+                    SUM(k.soluong) as tong_soluong,
+                    MIN(k.hansudung) as hansudung_ganhat
+                  FROM khohang k
+                  JOIN thuoc t ON k.thuoc_id = t.id
+                  JOIN donvi dv ON k.donvi_id = dv.id
+                  GROUP BY k.thuoc_id, k.donvi_id, t.ten_thuoc, dv.ten_donvi
+                  HAVING SUM(k.soluong) < ?
+                  ORDER BY tong_soluong ASC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$threshold]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ✅ 8. Lấy danh sách thuốc gần hết hạn hoặc đã hết hạn
+    public function getExpiringItems($daysThreshold = 30) {
+        $query = "SELECT
+                    k.id,
+                    k.thuoc_id,
+                    k.donvi_id,
+                    t.ten_thuoc,
+                    dv.ten_donvi,
+                    k.soluong,
+                    k.hansudung,
+                    ncc.ten_ncc,
+                    DATEDIFF(k.hansudung, CURDATE()) as ngay_conlai
+                  FROM khohang k
+                  JOIN thuoc t ON k.thuoc_id = t.id
+                  JOIN donvi dv ON k.donvi_id = dv.id
+                  JOIN nhacungcap ncc ON k.nhacungcap_id = ncc.id
+                  WHERE k.soluong > 0
+                  AND DATEDIFF(k.hansudung, CURDATE()) <= ?
+                  ORDER BY k.hansudung ASC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([$daysThreshold]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

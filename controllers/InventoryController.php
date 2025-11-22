@@ -120,6 +120,20 @@ class InventoryController {
     }
 
     /**
+     * Lấy danh sách thuốc gần hết
+     */
+    public function getLowStockItems($threshold = 20) {
+        return $this->model->getLowStockItems($threshold);
+    }
+
+    /**
+     * Lấy danh sách thuốc gần hết hạn hoặc đã hết hạn
+     */
+    public function getExpiringItems($daysThreshold = 30) {
+        return $this->model->getExpiringItems($daysThreshold);
+    }
+
+    /**
      * Cập nhật số lượng kho hàng dựa trên trạng thái đơn hàng
      */
     public function updateInventoryByOrderStatus() {
