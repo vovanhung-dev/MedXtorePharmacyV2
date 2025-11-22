@@ -435,6 +435,293 @@ $pageTitle = "POS - Bán hàng tại quầy";
     <script src="../assets/js/pos.js?v=<?php echo time(); ?>"></script>
 
     <script>
+        // Check if pos.js loaded successfully
+        console.log('Checking if pos.js functions are loaded...');
+        console.log('searchCustomer available:', typeof searchCustomer !== 'undefined');
+        console.log('clearCart available:', typeof clearCart !== 'undefined');
+        console.log('holdBill available:', typeof holdBill !== 'undefined');
+
+        // Fallback function definitions (only used if pos.js didn't load)
+        if (typeof searchCustomer === 'undefined') {
+            console.warn('⚠️ searchCustomer not loaded from pos.js, using fallback');
+            window.searchCustomer = function() {
+                console.log('🔍 searchCustomer() called (fallback version)');
+
+                const searchInput = document.getElementById('customerSearch');
+                const keyword = searchInput ? searchInput.value.trim() : '';
+
+                if (!keyword) {
+                    alert('Vui lòng nhập SĐT hoặc tên khách hàng');
+                    return;
+                }
+
+                const customerInfo = document.getElementById('customerInfo');
+                if (customerInfo) {
+                    customerInfo.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Đang tìm...</div>';
+                }
+
+                fetch('/api/pos/customer?action=search&keyword=' + encodeURIComponent(keyword))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data && data.data.length > 0) {
+                            // Found customers
+                            if (data.data.length === 1) {
+                                // Auto-select if only one result
+                                const customer = data.data[0];
+                                if (customerInfo) {
+                                    customerInfo.innerHTML = `
+                                        <div class="customer-selected">
+                                            <div class="customer-details">
+                                                <i class="bi bi-person-check-fill text-success"></i>
+                                                <div>
+                                                    <strong>${customer.ten || customer.name}</strong>
+                                                    <small>${customer.sdt || customer.phone}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                alert('✅ Đã chọn khách hàng: ' + (customer.ten || customer.name));
+                            } else {
+                                // Multiple results - show list
+                                let html = '<div class="customer-results">';
+                                data.data.forEach(customer => {
+                                    const customerJson = JSON.stringify(customer).replace(/"/g, '&quot;');
+                                    html += `
+                                        <div class="customer-result-item" onclick="selectCustomerFromSearch(${customerJson})" style="cursor: pointer; padding: 10px; border-bottom: 1px solid #eee; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'">
+                                            <div class="customer-result-info">
+                                                <strong>${customer.ten || customer.name}</strong><br>
+                                                <small><i class="bi bi-telephone"></i> ${customer.sdt || customer.phone}</small>
+                                                ${customer.email ? '<br><small><i class="bi bi-envelope"></i> ' + customer.email + '</small>' : ''}
+                                            </div>
+                                            <i class="bi bi-chevron-right" style="float: right; margin-top: 10px; color: #9ca3af;"></i>
+                                        </div>
+                                    `;
+                                });
+                                html += '</div>';
+                                customerInfo.innerHTML = html;
+                            }
+                        } else {
+                            // No customers found
+                            if (customerInfo) {
+                                customerInfo.innerHTML = `
+                                    <div class="customer-not-found">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                        <p>Không tìm thấy khách hàng</p>
+                                    </div>
+                                `;
+                            }
+                            alert('⚠️ Không tìm thấy khách hàng');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Search customer error:', error);
+                        alert('❌ Lỗi tìm kiếm khách hàng: ' + error.message);
+                        if (customerInfo) {
+                            customerInfo.innerHTML = `
+                                <div class="customer-default">
+                                    <i class="bi bi-person"></i>
+                                    <span>Khách vãng lai</span>
+                                </div>
+                            `;
+                        }
+                    });
+            };
+        }
+
+        if (typeof clearCart === 'undefined') {
+            console.warn('⚠️ clearCart not loaded from pos.js, using fallback');
+            window.clearCart = function() {
+                if (!confirm('Xóa toàn bộ giỏ hàng?')) {
+                    return;
+                }
+
+                fetch('/api/pos/cart', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'clear'})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('❌ Lỗi: ' + (data.message || 'Không thể xóa giỏ hàng'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Clear cart error:', error);
+                    alert('❌ Lỗi kết nối: ' + error.message);
+                });
+            };
+        }
+
+        if (typeof holdBill === 'undefined') {
+            console.warn('⚠️ holdBill not loaded from pos.js, using fallback');
+            window.holdBill = function() {
+                const modal = new bootstrap.Modal(document.getElementById('holdBillModal'));
+                modal.show();
+            };
+        }
+
+        if (typeof confirmHoldBill === 'undefined') {
+            window.confirmHoldBill = function() {
+                const billNameInput = document.getElementById('holdBillName');
+                const billName = billNameInput ? billNameInput.value.trim() : '';
+
+                fetch('/api/pos/held-bills', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'hold', bill_name: billName || null})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('holdBillModal'));
+                        if (modal) modal.hide();
+                        if (billNameInput) billNameInput.value = '';
+                        alert('✅ Đã tạm giữ hóa đơn');
+                        location.reload();
+                    } else {
+                        alert('❌ ' + (data.message || 'Lỗi tạm giữ hóa đơn'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Hold bill error:', error);
+                    alert('❌ Lỗi kết nối: ' + error.message);
+                });
+            };
+        }
+
+        if (typeof retrieveHeldBill === 'undefined') {
+            window.retrieveHeldBill = function(billId) {
+                fetch('/api/pos/held-bills', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'retrieve', bill_id: billId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('❌ ' + (data.message || 'Lỗi khôi phục hóa đơn'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Retrieve bill error:', error);
+                    alert('❌ Lỗi kết nối');
+                });
+            };
+        }
+
+        if (typeof proceedToPayment === 'undefined') {
+            window.proceedToPayment = function() {
+                const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                modal.show();
+                setTimeout(() => {
+                    if (typeof showCashPaymentForm === 'function') {
+                        showCashPaymentForm();
+                    }
+                }, 100);
+            };
+        }
+
+        // Function to select customer from search results
+        window.selectCustomerFromSearch = function(customer) {
+            console.log('✅ Selected customer:', customer);
+
+            const customerInfo = document.getElementById('customerInfo');
+            if (customerInfo) {
+                customerInfo.innerHTML = `
+                    <div class="customer-selected" style="padding: 15px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div class="customer-details" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <i class="bi bi-person-check-fill text-success" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <strong style="display: block; font-size: 1.1rem;">${customer.ten || customer.name}</strong>
+                                        <small style="color: #6b7280;"><i class="bi bi-telephone"></i> ${customer.sdt || customer.phone}</small>
+                                        ${customer.email ? '<br><small style="color: #6b7280;"><i class="bi bi-envelope"></i> ' + customer.email + '</small>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="clearSelectedCustomer()" style="margin-left: 10px;">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Clear search input
+            const searchInput = document.getElementById('customerSearch');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+
+            alert('✅ Đã chọn khách hàng: ' + (customer.ten || customer.name));
+        };
+
+        // Function to clear selected customer
+        window.clearSelectedCustomer = function() {
+            const customerInfo = document.getElementById('customerInfo');
+            if (customerInfo) {
+                customerInfo.innerHTML = `
+                    <div class="customer-default" style="padding: 15px; text-align: center; color: #6b7280;">
+                        <i class="bi bi-person" style="font-size: 2rem;"></i>
+                        <p style="margin: 5px 0 0 0;">Khách vãng lai</p>
+                    </div>
+                `;
+            }
+        };
+
+        if (typeof cancelOrder === 'undefined') {
+            window.cancelOrder = function() {
+                console.log('🚫 cancelOrder() called');
+
+                // Check if cart has items
+                const cartItems = document.querySelectorAll('#cartItems .cart-item');
+                console.log('Cart items count:', cartItems.length);
+
+                if (cartItems.length === 0) {
+                    alert('ℹ️ Giỏ hàng đã trống');
+                    return;
+                }
+
+                if (!confirm('⚠️ Bạn có chắc muốn hủy đơn hàng này?\n\nGiỏ hàng sẽ được xóa và khách hàng sẽ được đặt lại về khách vãng lai.')) {
+                    return;
+                }
+
+                // Call clearCart if available, otherwise reload
+                if (typeof clearCart === 'function') {
+                    clearCart();
+                } else {
+                    fetch('/api/pos/cart', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({action: 'clear'})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Đã hủy đơn hàng');
+                            location.reload();
+                        } else {
+                            alert('❌ Lỗi: ' + (data.message || 'Không thể hủy đơn hàng'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Cancel order error:', error);
+                        alert('❌ Lỗi kết nối: ' + error.message);
+                    });
+                }
+
+                // Clear selected customer
+                clearSelectedCustomer();
+            };
+        }
+
         // Manual Discount Functions (defined here to ensure availability)
         function updateDiscountPreview() {
             const discountType = document.getElementById('discountType')?.value;
