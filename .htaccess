@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /MEDXTOREPHARMACY/
+
+# Nếu đường dẫn là thư mục hoặc file thật thì không rewrite
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Chuyển mọi request kiểu /about thành index.php?page=about
+RewriteRule ^([a-zA-Z0-9_-]+)$ index.php?page=$1 [QSA,L]

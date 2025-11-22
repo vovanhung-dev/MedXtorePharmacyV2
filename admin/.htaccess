@@ -1,0 +1,2 @@
+# Bắt buộc Apache chạy file admin-auth.php trước mỗi request trong thư mục admin
+php_value auto_prepend_file "C:laragon/www/MedXtorePharmacy/admin/admin-auth.php"
