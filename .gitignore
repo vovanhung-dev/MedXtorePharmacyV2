@@ -56,7 +56,6 @@ Thumbs.db
 *.db
 
 # Config files with sensitive data
-config.php
 google_credentials.json
 
 *.md
