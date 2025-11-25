@@ -16,13 +16,6 @@ include('../includes/ad-sidebar.php');
 ?>
 
 <style>
-.content-wrapper {
-    margin-left: 250px;
-    padding: 20px;
-    background: #f4f6f9;
-    min-height: 100vh;
-}
-
 .stats-card {
     background: white;
     border-radius: 15px;
@@ -183,10 +176,6 @@ include('../includes/ad-sidebar.php');
 
 /* Responsive Design */
 @media (max-width: 992px) {
-    .content-wrapper {
-        margin-left: 0;
-    }
-    
     .stats-card {
         margin-bottom: 15px;
     }

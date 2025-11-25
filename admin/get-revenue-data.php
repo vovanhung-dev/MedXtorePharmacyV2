@@ -1,19 +1,19 @@
 <?php
 include_once("../includes/config.php");
 
-// Hàm lấy dữ liệu doanh thu
+// Hàm lấy dữ liệu doanh thu (chỉ tính đơn đã giao)
 function getRevenueData($period) {
     global $conn;
-    
+
     switch ($period) {
         case "7days":
             $startDate = date("Y-m-d", strtotime("-6 days"));
-            $sql = "SELECT 
+            $sql = "SELECT
                         DATE(ngay_dat) as date,
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
-                    FROM donhang 
-                    WHERE trangthai = 'dadat'
+                    FROM donhang
+                    WHERE trangthai = 'dagiao'
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -22,13 +22,13 @@ function getRevenueData($period) {
             break;
 
         case "30days":
-            $startDate = date("Y-m-d", strtotime("-29 days")); 
-            $sql = "SELECT 
+            $startDate = date("Y-m-d", strtotime("-29 days"));
+            $sql = "SELECT
                         DATE(ngay_dat) as date,
                         COUNT(*) as order_count,
-                        SUM(tongtien) as revenue  
+                        SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dadat'
+                    WHERE trangthai = 'dagiao'
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -39,12 +39,12 @@ function getRevenueData($period) {
         case "year":
         default:
             $currentYear = date("Y");
-            $sql = "SELECT 
+            $sql = "SELECT
                         MONTH(ngay_dat) as month,
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dadat' 
+                    WHERE trangthai = 'dagiao'
                     AND YEAR(ngay_dat) = ?
                     GROUP BY MONTH(ngay_dat)
                     ORDER BY month";
