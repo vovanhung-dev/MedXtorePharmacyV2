@@ -38,7 +38,7 @@ try {
         $controller->handleMomoReturn($orderId, $amount, $orderInfo, $transId);
         
         $_SESSION['success'] = "Thanh toán thành công!";
-        header("Location: /MedXtorePharmacy/pages/order_success.php");
+        header("Location: /pages/order_success.php");
         exit();
     }
     
@@ -56,7 +56,7 @@ try {
         unset($_SESSION['pending_momo_order']);
     }
     
-    header("Location: /MedXtorePharmacy/pages/cart.php");
+    header("Location: /pages/cart.php");
     exit();
     
 } catch (Exception $e) {
@@ -74,7 +74,7 @@ try {
         unset($_SESSION['pending_momo_order']);
     }
     
-    header("Location: /MedXtorePharmacy/pages/cart.php");
+    header("Location: /pages/cart.php");
     exit();
 }
 ?> 

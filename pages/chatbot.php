@@ -113,7 +113,7 @@
             chatBox.innerHTML += `<div class="chat-message user"><strong>Bạn:</strong> ${msg}</div>`;
             input.value = '';
 
-            const res = await fetch('http://localhost/MedXtorePharmacy/controllers/ChatbotController.php', {
+            const res = await fetch('http://localhost/controllers/ChatbotController.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: msg })

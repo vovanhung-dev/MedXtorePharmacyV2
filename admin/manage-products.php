@@ -85,7 +85,7 @@ $products = $productController->filter($search, $loai, $hsd);
             <tr>
               <td><?= $index + 1 ?></td>
               <td>
-                <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($p['hinhanh']) ?>"
+                <img src="/assets/images/product-images/<?= htmlspecialchars($p['hinhanh']) ?>"
                      alt="<?= htmlspecialchars($p['ten_thuoc']) ?>"
                      style="width: 60px; height: 60px; object-fit: contain; border-radius: 6px; background: #f8f8f8;">
               </td>
@@ -252,7 +252,7 @@ $products = $productController->filter($search, $loai, $hsd);
     // ✅ Hiển thị ảnh hiện tại (nếu bạn có khu vực hiển thị ảnh)
     const preview = document.getElementById('current-image-preview');
 if (preview && hinhanh) {
-  preview.src = `/MedXtorePharmacy/assets/images/product-images/${hinhanh}`;
+  preview.src = `/assets/images/product-images/${hinhanh}`;
 }
   });
 </script>

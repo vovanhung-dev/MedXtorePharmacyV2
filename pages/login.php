@@ -147,7 +147,7 @@ include('../includes/navbar.php');
 
             <!-- Nút đăng nhập bằng Google -->
             <div class="d-grid">
-            <a href="/MedXtorePharmacy/pages/google-login.php" class="btn btn-outline-dark py-2">
+            <a href="/pages/google-login.php" class="btn btn-outline-dark py-2">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" class="me-2" alt="Google Logo">
                 Đăng nhập bằng Google
               </a>

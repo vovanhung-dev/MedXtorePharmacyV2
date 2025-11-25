@@ -680,7 +680,7 @@ $formattedDate = $orderDate->format('d/m/Y H:i');
 
     <!-- Action Buttons - Won't be printed -->
     <div class="action-buttons no-print">
-        <a href="/MedXtorePharmacy/pages/home.php" class="btn btn-home">
+        <a href="/pages/home.php" class="btn btn-home">
             <i class="fas fa-home"></i> Quay lại trang chủ
         </a>
         <button class="btn" onclick="window.print()">

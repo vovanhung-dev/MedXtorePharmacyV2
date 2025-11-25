@@ -3,7 +3,7 @@ session_start();
 
 // Kiểm tra xem có thông báo thành công không
 if (!isset($_SESSION['success'])) {
-    header("Location: /MedXtorePharmacy/pages/cart.php");
+    header("Location: /pages/cart.php");
     exit();
 }
 
@@ -59,10 +59,10 @@ unset($_SESSION['success']); // Xóa thông báo sau khi hiển thị
             <h2 class="success-message"><?php echo htmlspecialchars($successMessage); ?></h2>
             <p class="lead">Đơn hàng của bạn đã được xác nhận và đang được xử lý.</p>
             <div class="action-buttons">
-                <a href="/MedXtorePharmacy/pages/order-history.php" class="btn btn-primary">
+                <a href="/pages/order-history.php" class="btn btn-primary">
                     <i class="fas fa-list-ul"></i> Xem đơn hàng
                 </a>
-                <a href="/MedXtorePharmacy/pages/home.php" class="btn btn-success">
+                <a href="/pages/home.php" class="btn btn-success">
                     <i class="fas fa-home"></i> Về trang chủ
                 </a>
             </div>

@@ -571,7 +571,7 @@ $top_products = $stmt_top_products->fetchAll(PDO::FETCH_ASSOC);
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td>
-                                            <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>"
+                                            <img src="/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>"
                                                 alt="<?= htmlspecialchars($product['ten_thuoc']) ?>"
                                                 style="width: 50px; height: 50px; object-fit: contain; border-radius: 6px; background: #f8f8f8;">
                                         </td>
@@ -635,7 +635,7 @@ $top_products = $stmt_top_products->fetchAll(PDO::FETCH_ASSOC);
                                             <tr class="<?= $item['soluong'] == 0 ? 'table-danger' : 'table-warning' ?>">
                                                 <td><?= $index + 1 ?></td>
                                                 <td>
-                                                    <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($item['hinhanh']) ?>"
+                                                    <img src="/assets/images/product-images/<?= htmlspecialchars($item['hinhanh']) ?>"
                                                         alt="<?= htmlspecialchars($item['ten_thuoc']) ?>"
                                                         style="width: 50px; height: 50px; object-fit: contain; border-radius: 6px; background: #f8f8f8;">
                                                 </td>

@@ -45,7 +45,7 @@ try {
                 $target_file = $target_dir . $new_file_name;
 
                 if (move_uploaded_file($_FILES["avatar"]["tmp_name"], $target_file)) {
-                    $avatar = '/MedXtorePharmacy/assets/images/avatars/' . $new_file_name;
+                    $avatar = '/assets/images/avatars/' . $new_file_name;
                 }
             }
 
@@ -100,7 +100,7 @@ try {
     <div class="row">
         <!-- Thêm nút quay lại đầu trang -->
         <div class="col-12 mb-4">
-            <a href="/MedXtorePharmacy/pages/home.php" class="btn btn-secondary">
+            <a href="/pages/home.php" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Quay lại trang chủ
             </a>
         </div>
@@ -111,7 +111,7 @@ try {
                     <?php if (!empty($user['avatar'])): ?>
                         <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="avatar" class="rounded-circle img-fluid" style="width: 150px; height: 150px; object-fit: cover;">
                     <?php else: ?>
-                        <img src="/MedXtorePharmacy/assets/images/default-avatar.png" alt="avatar" class="rounded-circle img-fluid" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="/assets/images/default-avatar.png" alt="avatar" class="rounded-circle img-fluid" style="width: 150px; height: 150px; object-fit: cover;">
                     <?php endif; ?>
                     <h5 class="my-3"><?php echo htmlspecialchars($user['ten']); ?></h5>
                     <p class="text-muted mb-1"><?php echo $user['vaitro_id'] == 1 ? 'Quản trị viên' : ($user['vaitro_id'] == 2 ? 'Nhân viên' : 'Khách hàng'); ?></p>

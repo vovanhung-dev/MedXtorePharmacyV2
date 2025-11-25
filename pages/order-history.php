@@ -108,7 +108,7 @@ require_once __DIR__ . '/../includes/navbar.php';
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /MedXtorePharmacy/pages/login.php");
+    header("Location: /pages/login.php");
     exit();
 }
 
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Thay thế hàm loadOrderDetails cũ bằng hàm mới này
     function loadOrderDetails(orderId) {
-        fetch(`/MedXtorePharmacy/pages/order-history.php?action=get_details&order_id=${orderId}`)
+        fetch(`/pages/order-history.php?action=get_details&order_id=${orderId}`)
             .then(response => {
                 console.log('Response status:', response.status);
                 return response.text().then(text => {
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>
                                     <div class="d-flex align-items-center">
                                         ${item.hinhanh ? `
-                                            <img src="/MedXtorePharmacy/assets/images/product-images/${item.hinhanh}" 
+                                            <img src="/assets/images/product-images/${item.hinhanh}" 
                                                  alt="${item.ten_thuoc}" 
                                                  class="me-2" 
                                                  style="width: 50px; height: 50px; object-fit: cover;">

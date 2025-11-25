@@ -5,7 +5,7 @@ session_start();
 
 // Nếu chưa đăng nhập thì chuyển hướng
 if (!isset($_SESSION['user_id'])) {
-  header("Location: /MedXtorePharmacy/pages/login.php");
+  header("Location: /pages/login.php");
   exit;
 }
 
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['thuoc_id'])) {
 
   $cart[$key]['tongtien'] = $cart[$key]['soluong'] * $gia;
 
-  header("Location: /MedXtorePharmacy/pages/cart.php");
+  header("Location: /pages/cart.php");
   exit;
 }
 
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_qty'])) {
     $cart[$key]['tongtien'] = $soluong * $cart[$key]['gia'];
   }
 
-  header("Location: /MedXtorePharmacy/pages/cart.php");
+  header("Location: /pages/cart.php");
   exit;
 }
 
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_qty'])) {
 if (isset($_GET['delete'])) {
   $key = $_GET['delete'];
   unset($cart[$key]);
-  header("Location: /MedXtorePharmacy/pages/cart.php");
+  header("Location: /pages/cart.php");
   exit;
 }
 
@@ -87,7 +87,7 @@ if (isset($_GET['delete'])) {
 // =======================
 if (isset($_GET['clear']) && $_GET['clear'] === 'all') {
   unset($_SESSION['carts'][$userId]);
-  header("Location: /MedXtorePharmacy/pages/cart.php");
+  header("Location: /pages/cart.php");
   exit;
 }
 
@@ -96,7 +96,7 @@ if (isset($_GET['clear']) && $_GET['clear'] === 'all') {
 // =======================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'checkout') {
   if (empty($cart)) {
-    header("Location: /MedXtorePharmacy/pages/cart.php");
+    header("Location: /pages/cart.php");
     exit;
   }
 
@@ -106,6 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     'tongtien' => array_sum(array_column($cart, 'tongtien'))
   ];
 
-  header("Location: /MedXtorePharmacy/pages/checkout.php");
+  header("Location: /pages/checkout.php");
   exit;
 }

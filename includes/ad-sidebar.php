@@ -29,6 +29,10 @@ require_once __DIR__ . '/../config/config.php';
           <i class="fas fa-shopping-cart"></i> Đơn Hàng</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'manage-consultations.php' ? 'active' : '' ?>" href="manage-consultations.php">
+          <i class="fas fa-clipboard-list"></i> Yêu Cầu Tư Vấn</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" href="../pages/pos-dashboard.php" target="_blank">
           <i class="fas fa-cash-register"></i> Bán Hàng POS
         </a>
@@ -60,7 +64,22 @@ require_once __DIR__ . '/../config/config.php';
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="/MedXtorePharmacy/pages/home.php" target="_blank">
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'inventory-report.php' ? 'active' : '' ?>" href="inventory-report.php">
+          <i class="fas fa-chart-bar"></i> Báo Cáo Tồn Kho
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'purchase-suggestions.php' ? 'active' : '' ?>" href="purchase-suggestions.php">
+          <i class="fas fa-shopping-basket"></i> Gợi Ý Mua Hàng
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'demand-forecast.php' ? 'active' : '' ?>" href="demand-forecast.php">
+          <i class="fas fa-chart-line"></i> Dự Đoán Nhu Cầu
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/pages/home.php" target="_blank">
           <i class="fas fa-globe"></i> Xem Trang Người Dùng
         </a>
       </li>

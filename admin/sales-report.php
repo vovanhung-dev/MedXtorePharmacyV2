@@ -394,7 +394,7 @@ $default_colors = ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc', '#6f42
                         <?php foreach ($sales_data as $index => $product): ?>
                             <div class="product-item" data-sold="<?= $product['total_sold'] ?>" data-revenue="<?= $product['revenue'] ?>">
                                 <div class="product-rank <?= $index < 3 ? 'top-'.($index + 1) : '' ?>"><?= $index + 1 ?></div>
-                                <img class="product-image" src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>" alt="<?= htmlspecialchars($product['ten_thuoc']) ?>">
+                                <img class="product-image" src="/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>" alt="<?= htmlspecialchars($product['ten_thuoc']) ?>">
                                 <div class="product-info">
                                     <div class="product-name"><?= htmlspecialchars($product['ten_thuoc']) ?></div>
                                     <div class="product-category"><?= htmlspecialchars($product['ten_loai']) ?></div>

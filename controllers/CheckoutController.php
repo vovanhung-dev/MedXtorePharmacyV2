@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /MedXtorePharmacy/pages/login.php");
+    header("Location: /pages/login.php");
     exit();
 }
 
@@ -14,7 +14,7 @@ $userId = $_SESSION['user_id'];
 $cart = $_SESSION['carts'][$userId] ?? [];
 
 if (empty($cart)) {
-    header("Location: /MedXtorePharmacy/pages/cart.php");       
+    header("Location: /pages/cart.php");       
     exit();
 }       
 
@@ -121,12 +121,12 @@ try {
                 'order_info' => "Thanh toan don hang #" . $donhang_id
             ];
             $_SESSION['pending_cart'] = $cart;
-            header("Location: /MedXtorePharmacy/controllers/PaymentController.php?action=momo");
+            header("Location: /controllers/PaymentController.php?action=momo");
         } else {
             // Xóa giỏ hàng và chuyển đến trang hóa đơn
             unset($_SESSION['carts'][$userId]);
             unset($_SESSION['applied_voucher']);
-            header("Location: /MedXtorePharmacy/pages/invoice.php?order_id=" . $donhang_id);
+            header("Location: /pages/invoice.php?order_id=" . $donhang_id);
         }
         exit();
 
@@ -139,6 +139,6 @@ try {
 
 } catch (Exception $e) {
     $_SESSION['error'] = "🛑 Lỗi xử lý đơn hàng: " . $e->getMessage();
-    header("Location: /MedXtorePharmacy/pages/checkout.php");
+    header("Location: /pages/checkout.php");
     exit();
 }

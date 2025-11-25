@@ -135,6 +135,11 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['carts'][$_SESSION['user_id']
         <li class="nav-item">
           <a class="nav-link fw-semibold <?= $currentPage == 'blog.php' ? 'active' : '' ?>" href="<?= page_url('blog.php'); ?>">Bài Viết</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link fw-semibold <?= $currentPage == 'consultation-request.php' ? 'active' : '' ?>" href="<?= page_url('consultation-request.php'); ?>">
+            <i class="bi bi-capsule"></i> Cần Mua Thuốc
+          </a>
+        </li>
       </ul>
 
       <div class="d-flex align-items-center gap-3">

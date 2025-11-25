@@ -78,11 +78,11 @@ $topExistProducts = $productController->getTopExistProducts(5);
           <div class="swiper-wrapper">
             <?php foreach ($topExistProducts as $product): ?>
               <div class="swiper-slide text-center px-2">
-                <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>"
+                <img src="/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>"
                   class="img-fluid rounded mb-2" style="max-height: 130px; object-fit: contain;" alt="<?= htmlspecialchars($product['ten_thuoc']) ?>">
                 <h6 class="fw-bold mb-1"><?= htmlspecialchars($product['ten_thuoc']) ?></h6>
                 <p class="small text-muted">Tồn kho: <?= $product['tong_soluong'] ?> sản phẩm</p>
-                <a href="/MedXtorePharmacy/pages/products/product-detail.php?id=<?= $product['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill">
+                <a href="/pages/products/product-detail.php?id=<?= $product['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill">
                   Xem ngay
                 </a>
               </div>
@@ -102,7 +102,7 @@ $topExistProducts = $productController->getTopExistProducts(5);
           <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm border-0 rounded-4 product-card">
               <div class="card-img-top-wrapper position-relative overflow-hidden" style="height: 230px;">
-                <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh'] ?? 'default.png') ?>"
+                <img src="/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh'] ?? 'default.png') ?>"
                   class="card-img-top w-100 h-100 object-fit-contain p-2"
                   alt="<?= htmlspecialchars($sp['ten_thuoc']) ?>">
               </div>
@@ -141,7 +141,7 @@ $topExistProducts = $productController->getTopExistProducts(5);
                     <i class="bi bi-eye me-1"></i> Xem chi tiết
                   </a>
 
-                  <form method="POST" action="/MedXtorePharmacy/controllers/CartController.php" class="flex-grow-1">
+                  <form method="POST" action="/controllers/CartController.php" class="flex-grow-1">
   <input type="hidden" name="thuoc_id" value="<?= $sp['id'] ?>">
   <input type="hidden" name="ten_thuoc" value="<?= htmlspecialchars($sp['ten_thuoc']) ?>">
   <input type="hidden" name="hinhanh" value="<?= htmlspecialchars($sp['hinhanh']) ?>">
@@ -164,7 +164,7 @@ $topExistProducts = $productController->getTopExistProducts(5);
       </div>
     <?php else: ?>
       <div class="text-center my-5">
-        <img src="/MedXtorePharmacy/assets/images/empty.png" alt="empty" style="width: 100px;">
+        <img src="/assets/images/empty.png" alt="empty" style="width: 100px;">
         <p class="text-muted">Hiện tại chưa có sản phẩm nào phù hợp.</p>
       </div>
     <?php endif; ?>
@@ -991,7 +991,7 @@ function capNhatDonVi(productId) {
         return;
       }
 
-      fetch(`/MedXtorePharmacy/controllers/SearchController.php?term=${encodeURIComponent(keyword)}`)
+      fetch(`/controllers/SearchController.php?term=${encodeURIComponent(keyword)}`)
         .then(res => res.json())
         .then(data => {
           suggestionBox.innerHTML = '';

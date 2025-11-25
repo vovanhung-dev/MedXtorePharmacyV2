@@ -9,7 +9,7 @@ $product = $productController->getById($product_id);
 
 // Nếu không có sản phẩm
 if (!$product) {
-  header("Location: /MedXtorePharmacy/pages/products/products.php");
+  header("Location: /pages/products/products.php");
   exit();
 }
 
@@ -24,7 +24,7 @@ $relatedProducts = $productController->getRelated($product['id'], $product['loai
     <div class="col-md-5 mb-4">
       <div class="card shadow-sm border-0 rounded-4">
         <div class="card-img-top-wrapper text-center p-4">
-          <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>" 
+          <img src="/assets/images/product-images/<?= htmlspecialchars($product['hinhanh']) ?>" 
                alt="<?= htmlspecialchars($product['ten_thuoc']) ?>" 
                class="img-fluid" style="max-height: 300px; object-fit: contain;">
         </div>
@@ -38,7 +38,7 @@ $relatedProducts = $productController->getRelated($product['id'], $product['loai
       <p class="text-muted"><?= htmlspecialchars($product['mota']) ?></p>
 
       <?php if (!empty($donviList)): ?>
-        <form method="POST" action="/MedXtorePharmacy/controllers/CartController.php" class="mt-4">
+        <form method="POST" action="/controllers/CartController.php" class="mt-4">
           <input type="hidden" name="thuoc_id" value="<?= $product['id'] ?>">
           <input type="hidden" name="ten_thuoc" value="<?= htmlspecialchars($product['ten_thuoc']) ?>">
           <input type="hidden" name="hinhanh" value="<?= htmlspecialchars($product['hinhanh']) ?>">
@@ -100,14 +100,14 @@ $relatedProducts = $productController->getRelated($product['id'], $product['loai
           <div class="col-md-3 mb-4">
             <div class="card product-card h-100 shadow-sm border-0 rounded-4">
               <div class="card-img-top-wrapper text-center p-3" style="height: 200px;">
-                <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh']) ?>" 
+                <img src="/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh']) ?>" 
                      class="w-100 h-100 object-fit-contain" 
                      alt="<?= htmlspecialchars($sp['ten_thuoc']) ?>">
               </div>
               <div class="card-body text-center">
                 <h6 class="fw-bold mb-2"><?= htmlspecialchars($sp['ten_thuoc']) ?></h6>
                 <p class="text-muted small">Loại: <?= htmlspecialchars($sp['ten_loai']) ?></p>
-                <a href="/MedXtorePharmacy/pages/products/product-detail.php?id=<?= $sp['id'] ?>" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
+                <a href="/pages/products/product-detail.php?id=<?= $sp['id'] ?>" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
                   <i class="bi bi-eye"></i> Xem chi tiết
                 </a>
               </div>

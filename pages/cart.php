@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/navbar.php';
 // ✅ Nếu chưa đăng nhập → chuyển sang trang đăng nhập
 if (!isset($_SESSION['user_id'])) {
   // Sau khi đăng nhập xong sẽ quay lại giỏ hàng
-  $_SESSION['redirect_after_login'] = '/MedXtorePharmacy/pages/cart.php';
-  header("Location: /MedXtorePharmacy/pages/login.php");
+  $_SESSION['redirect_after_login'] = '/pages/cart.php';
+  header("Location: /pages/login.php");
   exit();
 }
 
@@ -44,7 +44,7 @@ $soLuongSP = count($cart);
     height: 100%;
     top: 0;
     left: 0;
-    background: url("/MedXtorePharmacy/assets/images/pattern.svg") repeat;
+    background: url("/assets/images/pattern.svg") repeat;
     opacity: 0.1;
   }
 
@@ -356,10 +356,10 @@ $soLuongSP = count($cart);
   <div class="container fade-in">
     <?php if (empty($cart)): ?>
       <div class="empty-cart">
-        <img src="/MedXtorePharmacy/assets/images/empty.png" alt="Giỏ hàng trống">
+        <img src="/assets/images/empty.png" alt="Giỏ hàng trống">
         <h3 class="mt-4 text-muted">Giỏ hàng của bạn đang trống</h3>
         <p class="text-muted mb-4">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
-        <a href="/MedXtorePharmacy/pages/products/products.php" class="btn btn-action btn-continue">
+        <a href="/pages/products/products.php" class="btn btn-action btn-continue">
           <i class="bi bi-arrow-left"></i> Bắt đầu mua sắm
         </a>
       </div>
@@ -377,7 +377,7 @@ $soLuongSP = count($cart);
                   <div class="row align-items-center">
                     <div class="col-md-2 col-3 text-center">
                       <div class="overflow-hidden rounded">
-                        <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($item['hinhanh']) ?>"
+                        <img src="/assets/images/product-images/<?= htmlspecialchars($item['hinhanh']) ?>"
                           alt="<?= htmlspecialchars($item['ten_thuoc']) ?>"
                           class="product-image rounded">
                       </div>
@@ -389,7 +389,7 @@ $soLuongSP = count($cart);
                     </div>
 
                     <div class="col-md-3 col-6 mt-3 mt-md-0">
-                      <form action="/MedXtorePharmacy/controllers/CartController.php" method="POST" class="d-flex align-items-center">
+                      <form action="/controllers/CartController.php" method="POST" class="d-flex align-items-center">
                         <input type="hidden" name="key" value="<?= $key ?>">
 
                         <div class="input-group">
@@ -414,7 +414,7 @@ $soLuongSP = count($cart);
                     </div>
 
                     <div class="col-md-1 col-6 text-end mt-3 mt-md-0">
-                      <a href="/MedXtorePharmacy/controllers/CartController.php?delete=<?= $key ?>"
+                      <a href="/controllers/CartController.php?delete=<?= $key ?>"
                         class="btn btn-delete"
                         onclick="return confirm('Bạn có chắc muốn xoá sản phẩm này khỏi giỏ hàng?');">
                         <i class="bi bi-trash"></i>
@@ -426,13 +426,13 @@ $soLuongSP = count($cart);
             </div>
 
             <div class="d-flex justify-content-between mt-4">
-              <a href="/MedXtorePharmacy/controllers/CartController.php?clear=all"
+              <a href="/controllers/CartController.php?clear=all"
                 class="btn btn-action btn-clear"
                 onclick="return confirm('Bạn có chắc chắn muốn xoá toàn bộ giỏ hàng?');">
                 <i class="bi bi-trash me-1"></i> Xoá tất cả
               </a>
 
-              <a href="/MedXtorePharmacy/pages/products/products.php"
+              <a href="/pages/products/products.php"
                 class="btn btn-action btn-continue">
                 <i class="bi bi-arrow-left me-1"></i> Tiếp tục mua hàng
               </a>
@@ -468,7 +468,7 @@ $soLuongSP = count($cart);
               <small class="text-muted">(Đã bao gồm VAT nếu có)</small>
             </div>
 
-            <form method="POST" action="/MedXtorePharmacy/pages/checkout.php">
+            <form method="POST" action="/pages/checkout.php">
               <button type="submit" class="btn btn-checkout w-100">
                 <i class="bi bi-credit-card me-2"></i> Tiến hành thanh toán
               </button>

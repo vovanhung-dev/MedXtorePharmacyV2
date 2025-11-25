@@ -136,7 +136,7 @@ $tinmoi = $blogCtrl->getLatestPosts(3);
     <div class="border rounded-4 p-4 bg-white shadow-sm text-center h-100 hover-shadow">
       <h5 class="fw-bold text-primary mb-2"><?= htmlspecialchars($dm['ten_loai']) ?></h5>
       <p class="text-muted mb-3">Sản phẩm thuộc nhóm <?= htmlspecialchars($dm['ten_loai']) ?> đang rất được ưa chuộng.</p>
-      <a href="/MedXtorePharmacy/pages/products/products.php?loai=<?= $dm['id'] ?>" class="btn btn-outline-info rounded-pill px-4">
+      <a href="/pages/products/products.php?loai=<?= $dm['id'] ?>" class="btn btn-outline-info rounded-pill px-4">
         Xem sản phẩm
       </a>
     </div>
@@ -158,7 +158,7 @@ $tinmoi = $blogCtrl->getLatestPosts(3);
         <div class="col-md-4">
           <div class="card h-100 shadow-sm border-0 rounded-4">
             <div class="p-3">
-              <img src="/MedXtorePharmacy/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh']) ?>"
+              <img src="/assets/images/product-images/<?= htmlspecialchars($sp['hinhanh']) ?>"
                 alt="<?= htmlspecialchars($sp['ten_thuoc']) ?>"
                 class="w-100 fixed-img rounded bg-light">
             </div>
@@ -168,7 +168,7 @@ $tinmoi = $blogCtrl->getLatestPosts(3);
                 <?= number_format($sp['gia']) ?>đ / <?= htmlspecialchars($sp['ten_donvi']) ?>
               </p>
               <p class="text-muted mb-2"><?= htmlspecialchars(mb_strimwidth(strip_tags($sp['mota'] ?? ''), 0, 80, "...")) ?></p>
-              <a href="/MedXtorePharmacy/pages/products/product-detail.php?id=<?= $sp['id'] ?>"
+              <a href="/pages/products/product-detail.php?id=<?= $sp['id'] ?>"
                 class="btn btn-outline-primary btn-sm rounded-pill">
                 Xem chi tiết
               </a>

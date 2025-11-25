@@ -25,8 +25,8 @@ class PaymentController {
                 'accessKey' => 'F8BBA842ECF85',
                 'secretKey' => 'K951B6PE1waDMi640xX08PD3vg6EkVlz',
                 'momoApiUrl' => 'https://test-payment.momo.vn/v2/gateway/api/create',
-                'returnUrl' => 'http://localhost:81/MedXtorePharmacy/pages/momo_return.php',
-                'notifyUrl' => 'http://localhost:81/MedXtorePharmacy/controllers/PaymentController.php?action=notify',
+                'returnUrl' => 'http://localhost:81/pages/momo_return.php',
+                'notifyUrl' => 'http://localhost:81/controllers/PaymentController.php?action=notify',
                 'requestType' => 'captureWallet'
             ];
 
@@ -122,7 +122,7 @@ class PaymentController {
                 unset($_SESSION['pending_cart']);
             }
             
-            header("Location: /MedXtorePharmacy/pages/checkout.php");
+            header("Location: /pages/checkout.php");
             exit();
         }
     }
@@ -246,7 +246,7 @@ class PaymentController {
 
                     // Chuyển hướng đến trang thông báo thành công
                     $_SESSION['success'] = "Thanh toán thành công! Cảm ơn bạn đã mua hàng.";
-                    header("Location: /MedXtorePharmacy/pages/order_success.php");
+                    header("Location: /pages/order_success.php");
                     exit();
 
                 } catch (Exception $e) {
@@ -271,7 +271,7 @@ class PaymentController {
                 }
                 
                 $_SESSION['error'] = "Thanh toán MoMo không thành công. Vui lòng thử lại.";
-                header("Location: /MedXtorePharmacy/pages/cart.php");
+                header("Location: /pages/cart.php");
                 exit();
             }
 
@@ -285,7 +285,7 @@ class PaymentController {
                 $_SESSION['carts'][$userId] = $_SESSION['pending_momo_order']['cart'];
             }
             
-            header("Location: /MedXtorePharmacy/pages/cart.php");
+            header("Location: /pages/cart.php");
             exit();
         }
     }
@@ -338,10 +338,10 @@ if (isset($_GET['action'])) {
         case 'callback':
             // Chuyển hướng callback về trang xử lý riêng
             $queryString = http_build_query($_GET);
-            header("Location: /MedXtorePharmacy/pages/momo_return.php?" . $queryString);
+            header("Location: /pages/momo_return.php?" . $queryString);
             exit();
         default:
-            header("Location: /MedXtorePharmacy/pages/checkout.php");
+            header("Location: /pages/checkout.php");
             exit();
     }
 } 

@@ -3,7 +3,7 @@ session_start();
 
 // Check if user is logged in and has POS access
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /MedXtorePharmacy/pages/login.php");
+    header("Location: /pages/login.php");
     exit();
 }
 
@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $orderId = $_GET['order_id'] ?? $_SESSION['pos_current_order'] ?? null;
 
 if (!$orderId) {
-    header("Location: /MedXtorePharmacy/pages/pos.php");
+    header("Location: /pages/pos.php");
     exit();
 }
 
@@ -29,7 +29,7 @@ $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
 
 if (!$order) {
-    echo "<script>alert('Không tìm thấy đơn hàng'); window.location.href='/MedXtorePharmacy/pages/pos.php';</script>";
+    echo "<script>alert('Không tìm thấy đơn hàng'); window.location.href='/pages/pos.php';</script>";
     exit();
 }
 
@@ -1039,7 +1039,7 @@ require_once __DIR__ . '/../includes/header.php';
             $('#momo-qr').hide();
 
             $.ajax({
-                url: '/MedXtorePharmacy/controllers/POSPaymentController.php',
+                url: '/controllers/POSPaymentController.php',
                 method: 'POST',
                 data: {
                     action: 'momo_payment',
@@ -1165,7 +1165,7 @@ require_once __DIR__ . '/../includes/header.php';
             }
 
             $.ajax({
-                url: '/MedXtorePharmacy/controllers/POSPaymentController.php',
+                url: '/controllers/POSPaymentController.php',
                 method: 'POST',
                 data: paymentData,
                 dataType: 'json',
@@ -1177,7 +1177,7 @@ require_once __DIR__ . '/../includes/header.php';
                         alert('Thanh toán thành công!');
 
                         // Redirect to invoice page
-                        window.location.href = `/MedXtorePharmacy/pages/invoice.php?order_id=${orderId}`;
+                        window.location.href = `/pages/invoice.php?order_id=${orderId}`;
                     } else {
                         alert('Lỗi: ' + response.message);
                     }

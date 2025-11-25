@@ -3,8 +3,8 @@ session_start();
 
 // ✅ Kiểm tra đăng nhập
 if (!isset($_SESSION['user_id'])) {
-    $_SESSION['redirect_after_login'] = '/MedXtorePharmacy/pages/checkout.php';
-    header("Location: /MedXtorePharmacy/pages/login.php");
+    $_SESSION['redirect_after_login'] = '/pages/checkout.php';
+    header("Location: /pages/login.php");
     exit();
 }
 
@@ -13,7 +13,7 @@ $cart = $_SESSION['carts'][$userId] ?? [];
 
 // ✅ Nếu giỏ hàng trống thì quay lại
 if (empty($cart)) {
-    header("Location: /MedXtorePharmacy/pages/cart.php");
+    header("Location: /pages/cart.php");
     exit();
 }
 
@@ -65,7 +65,7 @@ require_once __DIR__ . '/../includes/navbar.php';
         height: 100%;
         top: 0;
         left: 0;
-        background: url("/MedXtorePharmacy/assets/images/pattern.svg") repeat;
+        background: url("/assets/images/pattern.svg") repeat;
         opacity: 0.1;
     }
 
@@ -597,7 +597,7 @@ require_once __DIR__ . '/../includes/navbar.php';
             </div>
         </div>
 
-        <form action="/MedXtorePharmacy/controllers/CheckoutController.php" method="POST">
+        <form action="/controllers/CheckoutController.php" method="POST">
             <div class="row">
                 <!-- Phần thông tin thanh toán -->
                 <div class="col-lg-8">
@@ -868,7 +868,7 @@ require_once __DIR__ . '/../includes/navbar.php';
                             <div class="summary-products">
                                 <?php foreach ($cart as $item) : ?>
                                     <div class="summary-product">
-                                        <img src="/MedXtorePharmacy/assets/images/product-images/<?php echo htmlspecialchars($item['hinhanh']); ?>"
+                                        <img src="/assets/images/product-images/<?php echo htmlspecialchars($item['hinhanh']); ?>"
                                             alt="<?php echo htmlspecialchars($item['ten_thuoc']); ?>"
                                             class="summary-product-img">
 
@@ -1089,7 +1089,7 @@ require_once __DIR__ . '/../includes/navbar.php';
         return;
     }
 
-    fetch('/MedXtorePharmacy/controllers/VoucherController.php', {
+    fetch('/controllers/VoucherController.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
