@@ -107,11 +107,6 @@ $top_products = $stmt_top_products->fetchAll(PDO::FETCH_ASSOC);
         color: #2e2e2e;
     }
 
-    .main-content {
-        padding: 1.5rem;
-        background-color: transparent;
-    }
-
     /* Enhanced Dashboard Cards */
     .dashboard-card {
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -193,10 +188,6 @@ $top_products = $stmt_top_products->fetchAll(PDO::FETCH_ASSOC);
 
     /* Responsive Tweaks */
     @media (max-width: 768px) {
-        .main-content {
-            padding: 0.5rem;
-        }
-        
         .dashboard-card {
             margin-bottom: 1rem;
         }

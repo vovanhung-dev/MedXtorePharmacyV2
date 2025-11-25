@@ -124,6 +124,20 @@ $default_colors = ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc', '#6f42
 ?>
 
 <style>
+    /* Main Content Layout */
+    .main-content {
+        margin-left: 250px;
+        padding: 1.5rem;
+        min-height: 100vh;
+        background-color: #f8f9fc;
+    }
+
+    @media (max-width: 768px) {
+        .main-content {
+            margin-left: 0;
+        }
+    }
+
     /* Sales Report Styling */
     .report-card {
         transition: all 0.3s ease;
