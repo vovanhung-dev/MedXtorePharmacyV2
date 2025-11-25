@@ -17,7 +17,16 @@ $productController = new ProductController();
 $search = $_GET['search'] ?? '';
 $loai = $_GET['loai'] ?? '';
 $hsd = $_GET['hsd'] ?? '';
-$products = $productController->filter($search, $loai, $hsd);
+
+// Pagination
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+$allProducts = $productController->filter($search, $loai, $hsd);
+$totalItems = count($allProducts);
+$totalPages = ceil($totalItems / $limit);
+$products = array_slice($allProducts, $offset, $limit);
 ?>
 
 <!-- Main Content -->
@@ -83,7 +92,7 @@ $products = $productController->filter($search, $loai, $hsd);
         <tbody>
           <?php foreach ($products as $index => $p): ?>
             <tr>
-              <td><?= $index + 1 ?></td>
+              <td><?= $offset + $index + 1 ?></td>
               <td>
                 <img src="/assets/images/product-images/<?= htmlspecialchars($p['hinhanh']) ?>"
                      alt="<?= htmlspecialchars($p['ten_thuoc']) ?>"
@@ -123,6 +132,44 @@ $products = $productController->filter($search, $loai, $hsd);
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($totalItems > 0): ?>
+    <div class="card-footer">
+      <?php if ($totalPages > 1): ?>
+      <nav>
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&loai=<?= urlencode($loai) ?>&hsd=<?= urlencode($hsd) ?>">Trước</a>
+          </li>
+          <?php
+          // Smart pagination: show first, last, current and surrounding pages
+          $range = 2;
+          for ($i = 1; $i <= $totalPages; $i++):
+            if ($i == 1 || $i == $totalPages || ($i >= $page - $range && $i <= $page + $range)):
+          ?>
+            <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+              <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&loai=<?= urlencode($loai) ?>&hsd=<?= urlencode($hsd) ?>"><?= $i ?></a>
+            </li>
+          <?php
+            elseif ($i == $page - $range - 1 || $i == $page + $range + 1):
+          ?>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <?php
+            endif;
+          endfor;
+          ?>
+          <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&loai=<?= urlencode($loai) ?>&hsd=<?= urlencode($hsd) ?>">Sau</a>
+          </li>
+        </ul>
+      </nav>
+      <?php endif; ?>
+      <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+        <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> sản phẩm)</small>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 
   <!-- Add Medicine Modal -->

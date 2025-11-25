@@ -14,7 +14,16 @@ $dsLoaiBaiViet = $loaiStmt->fetchAll(PDO::FETCH_ASSOC);
 $blogController = new BlogController();
 $search = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
-$blogs = $blogController->filter($search, $category);
+
+// Pagination
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+$allBlogs = $blogController->filter($search, $category);
+$totalItems = count($allBlogs);
+$totalPages = ceil($totalItems / $limit);
+$blogs = array_slice($allBlogs, $offset, $limit);
 ?>
 
 <!-- Main Content -->
@@ -119,6 +128,32 @@ $blogs = $blogController->filter($search, $category);
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($totalItems > 0): ?>
+    <div class="card-footer">
+        <?php if ($totalPages > 1): ?>
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>">Trước</a>
+                </li>
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                        <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>"><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+                <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&category=<?= urlencode($category) ?>">Sau</a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
+        <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+            <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> mục)</small>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
   <!-- Add Blog Modal -->
   <div class="modal fade" id="addBlogModal" tabindex="-1" aria-labelledby="addBlogLabel" aria-hidden="true">

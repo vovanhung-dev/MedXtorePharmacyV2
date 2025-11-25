@@ -1,11 +1,33 @@
-<?php 
+<?php
 require_once __DIR__ . '/../controllers/CategoryController.php';
 $pageTitle = 'Quản lý loại thuốc';
-include_once('../includes/ad-header.php'); 
+include_once('../includes/ad-header.php');
 include_once('../includes/ad-sidebar.php');
 
 $controller = new CategoryController();
-$categories = $controller->index();
+
+// Pagination and search parameters
+$search = $_GET['search'] ?? '';
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+// Get categories with search and pagination
+$allCategories = $controller->index();
+
+// Filter by search
+if (!empty($search)) {
+    $categories = array_filter($allCategories, function($cat) use ($search) {
+        return stripos($cat['ten_loai'], $search) !== false;
+    });
+} else {
+    $categories = $allCategories;
+}
+
+// Calculate pagination
+$totalItems = count($categories);
+$totalPages = ceil($totalItems / $limit);
+$categories = array_slice($categories, $offset, $limit);
 
 // Xử lý thêm loại thuốc mới
 $addMessage = '';
@@ -63,6 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
   <?= $updateMessage ?>
   <?= $deleteMessage ?>
 
+  <!-- Search -->
+  <div class="card p-3 shadow-sm mb-3">
+    <form method="GET" class="row g-2">
+      <div class="col-md-10">
+        <input type="text" name="search" class="form-control" placeholder="Tìm kiếm loại thuốc..." value="<?= htmlspecialchars($search) ?>">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Tìm</button>
+      </div>
+    </form>
+  </div>
+
   <!-- Category Table -->
   <div class="card shadow-sm fade-in">
     <div class="table-responsive">
@@ -106,6 +140,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_category'])) {
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($totalItems > 0): ?>
+    <div class="card-footer">
+      <?php if ($totalPages > 1): ?>
+      <nav>
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>">Trước</a>
+          </li>
+          <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+              <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"><?= $i ?></a>
+            </li>
+          <?php endfor; ?>
+          <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>">Sau</a>
+          </li>
+        </ul>
+      </nav>
+      <?php endif; ?>
+      <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+        <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> mục)</small>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 

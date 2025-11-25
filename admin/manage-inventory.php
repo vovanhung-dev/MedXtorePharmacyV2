@@ -1,7 +1,30 @@
 <?php
 require_once '../controllers/InventoryController.php';
 $inventoryCtrl = new InventoryController();
-$khohang = $inventoryCtrl->getAll();
+
+// Pagination and search parameters
+$search = $_GET['search'] ?? '';
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+$allKhohang = $inventoryCtrl->getAll();
+
+// Filter by search
+if (!empty($search)) {
+    $khohang = array_filter($allKhohang, function($item) use ($search) {
+        return stripos($item['ten_thuoc'], $search) !== false ||
+               stripos($item['ten_ncc'], $search) !== false;
+    });
+} else {
+    $khohang = $allKhohang;
+}
+
+// Calculate pagination
+$totalItems = count($khohang);
+$totalPages = ceil($totalItems / $limit);
+$khohang = array_slice($khohang, $offset, $limit);
+
 $lowStockItems = $inventoryCtrl->getLowStockItems(20); // Ngưỡng: 20 đơn vị
 $expiringItems = $inventoryCtrl->getExpiringItems(30); // Ngưỡng: 30 ngày
 
@@ -88,6 +111,18 @@ require_once '../includes/ad-sidebar.php';
   </div>
   <?php endif; ?>
 
+  <!-- Search -->
+  <div class="card p-3 shadow-sm mb-3">
+    <form method="GET" class="row g-2">
+      <div class="col-md-10">
+        <input type="text" name="search" class="form-control" placeholder="Tìm kiếm thuốc hoặc nhà cung cấp..." value="<?= htmlspecialchars($search) ?>">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Tìm</button>
+      </div>
+    </form>
+  </div>
+
   <div class="card shadow-sm fade-in">
     <div class="table-responsive">
       <table class="table table-bordered align-middle table-hover mb-0">
@@ -167,6 +202,32 @@ require_once '../includes/ad-sidebar.php';
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($totalItems > 0): ?>
+    <div class="card-footer">
+      <?php if ($totalPages > 1): ?>
+      <nav>
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>">Trước</a>
+          </li>
+          <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+              <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"><?= $i ?></a>
+            </li>
+          <?php endfor; ?>
+          <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>">Sau</a>
+          </li>
+        </ul>
+      </nav>
+      <?php endif; ?>
+      <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+        <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> mục)</small>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 

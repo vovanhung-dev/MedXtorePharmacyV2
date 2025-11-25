@@ -40,7 +40,15 @@ $filters = [
     'to_date' => $_GET['to_date'] ?? ''
 ];
 
-$requests = $controller->getAll($filters);
+// Pagination
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+$allRequests = $controller->getAll($filters);
+$totalItems = count($allRequests);
+$totalPages = ceil($totalItems / $limit);
+$requests = array_slice($allRequests, $offset, $limit);
 
 // Đếm số lượng theo trạng thái
 $countAll = $controller->countByStatus();
@@ -359,6 +367,32 @@ include('../includes/ad-sidebar.php');
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    <?php if ($totalItems > 0): ?>
+    <div class="p-3">
+      <?php if ($totalPages > 1): ?>
+      <nav>
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($filters['search']) ?>&trang_thai=<?= urlencode($filters['trang_thai']) ?>&from_date=<?= urlencode($filters['from_date']) ?>&to_date=<?= urlencode($filters['to_date']) ?>">Trước</a>
+          </li>
+          <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+              <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($filters['search']) ?>&trang_thai=<?= urlencode($filters['trang_thai']) ?>&from_date=<?= urlencode($filters['from_date']) ?>&to_date=<?= urlencode($filters['to_date']) ?>"><?= $i ?></a>
+            </li>
+          <?php endfor; ?>
+          <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($filters['search']) ?>&trang_thai=<?= urlencode($filters['trang_thai']) ?>&from_date=<?= urlencode($filters['from_date']) ?>&to_date=<?= urlencode($filters['to_date']) ?>">Sau</a>
+          </li>
+        </ul>
+      </nav>
+      <?php endif; ?>
+      <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+        <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> mục)</small>
+      </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal xem chi tiết -->

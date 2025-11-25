@@ -10,8 +10,25 @@ $page_title = "Quản lý mã giảm giá";
 $sql_cleanup = "DELETE FROM vouchers WHERE expires_at < NOW() OR is_used = 1";
 $conn->query($sql_cleanup);
 
-// Lấy các voucher còn hiệu lực
-$sql = "SELECT * FROM vouchers WHERE is_used = 0 ORDER BY created_at DESC";
+// Pagination and search parameters
+$search = $_GET['search'] ?? '';
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+// Lấy các voucher còn hiệu lực với search và pagination
+$sql = "SELECT * FROM vouchers WHERE is_used = 0";
+if (!empty($search)) {
+    $sql .= " AND code LIKE '%" . $conn->real_escape_string($search) . "%'";
+}
+$sql .= " ORDER BY created_at DESC";
+$allResult = $conn->query($sql);
+$allVouchers = $allResult->fetch_all(MYSQLI_ASSOC);
+$totalItems = count($allVouchers);
+$totalPages = ceil($totalItems / $limit);
+
+// Apply pagination
+$sql .= " LIMIT $limit OFFSET $offset";
 $result = $conn->query($sql);
 
 // Xử lý xóa mã
@@ -52,7 +69,19 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
                     </div>
                     <?php unset($_SESSION['error']); ?>
                 <?php endif; ?>
-                
+
+                <!-- Search -->
+                <div class="card shadow-sm mb-3 p-3">
+                    <form method="GET" class="row g-2">
+                        <div class="col-md-10">
+                            <input type="text" name="search" class="form-control" placeholder="Tìm kiếm mã giảm giá..." value="<?= htmlspecialchars($search) ?>">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Tìm</button>
+                        </div>
+                    </form>
+                </div>
+
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div class="table-responsive">
@@ -104,6 +133,32 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination -->
+                        <?php if ($totalItems > 0): ?>
+                        <div class="card-footer">
+                            <?php if ($totalPages > 1): ?>
+                            <nav>
+                                <ul class="pagination justify-content-center mb-0">
+                                    <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>">Trước</a>
+                                    </li>
+                                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                        <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                                            <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"><?= $i ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+                                    <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>">Sau</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <?php endif; ?>
+                            <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+                                <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> mục)</small>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 

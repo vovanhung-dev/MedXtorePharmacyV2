@@ -88,7 +88,7 @@ class Product {
             $query .= " WHERE " . implode(" AND ", $conditions);
         }
     
-        $query .= " GROUP BY t.id, td.donvi_id ORDER BY t.id DESC";
+        $query .= " GROUP BY t.id, t.ten_thuoc, t.mota, t.hinhanh, l.ten_loai, dv.ten_donvi, td.gia, td.donvi_id ORDER BY t.id DESC";
     
         $stmt = $this->conn->prepare($query);
         $stmt->execute($params);
