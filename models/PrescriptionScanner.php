@@ -1,0 +1,495 @@
+<?php
+/**
+ * PrescriptionScanner - AI-powered prescription reader using Google Gemini Vision
+ * Đọc và phân tích đơn thuốc từ hình ảnh/PDF sử dụng AI
+ */
+
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+class PrescriptionScanner {
+    private $conn;
+    private $apiKey;
+    private $apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+    public function __construct() {
+        $db = new Database();
+        $this->conn = $db->getConnection();
+
+        // Load environment variables
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+        $dotenv->load();
+
+        $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+    }
+
+    /**
+     * Scan prescription from uploaded file (image or PDF)
+     * @param array $file - $_FILES array element
+     * @return array - Result with extracted medicines
+     */
+    public function scanPrescription($file) {
+        try {
+            // Validate file
+            $validation = $this->validateFile($file);
+            if (!$validation['success']) {
+                return $validation;
+            }
+
+            // Get file content as base64
+            $fileContent = file_get_contents($file['tmp_name']);
+            $base64Data = base64_encode($fileContent);
+            $mimeType = $file['type'];
+
+            // For PDF, we need to convert to image first or use different approach
+            if ($mimeType === 'application/pdf') {
+                return $this->scanPdfPrescription($file);
+            }
+
+            // Send to Gemini Vision API
+            $extractedData = $this->analyzeWithGemini($base64Data, $mimeType);
+
+            if (!$extractedData['success']) {
+                return $extractedData;
+            }
+
+            // Match extracted medicines with database
+            $matchedMedicines = $this->matchMedicinesWithDatabase($extractedData['medicines']);
+
+            return [
+                'success' => true,
+                'message' => 'Đã phân tích đơn thuốc thành công',
+                'raw_text' => $extractedData['raw_text'] ?? '',
+                'medicines' => $matchedMedicines,
+                'patient_info' => $extractedData['patient_info'] ?? null,
+                'doctor_info' => $extractedData['doctor_info'] ?? null,
+                'diagnosis' => $extractedData['diagnosis'] ?? null,
+                'date' => $extractedData['date'] ?? null
+            ];
+
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Lỗi xử lý đơn thuốc: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Validate uploaded file
+     */
+    private function validateFile($file) {
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return ['success' => false, 'message' => 'File không hợp lệ'];
+        }
+
+        $allowedTypes = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf'
+        ];
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            return ['success' => false, 'message' => 'Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP) hoặc PDF'];
+        }
+
+        // Max 10MB
+        $maxSize = 10 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return ['success' => false, 'message' => 'File không được vượt quá 10MB'];
+        }
+
+        return ['success' => true];
+    }
+
+    /**
+     * Analyze image with Google Gemini Vision API
+     */
+    private function analyzeWithGemini($base64Data, $mimeType) {
+        if (empty($this->apiKey)) {
+            return ['success' => false, 'message' => 'Chưa cấu hình API key cho Gemini AI'];
+        }
+
+        $prompt = $this->buildPrompt();
+
+        $requestData = [
+            'contents' => [
+                [
+                    'parts' => [
+                        [
+                            'text' => $prompt
+                        ],
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Data
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.1,
+                'topK' => 32,
+                'topP' => 1,
+                'maxOutputTokens' => 4096,
+            ]
+        ];
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->apiEndpoint . '?key=' . $this->apiKey,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($requestData),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 60
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($error) {
+            return ['success' => false, 'message' => 'Lỗi kết nối API: ' . $error];
+        }
+
+        if ($httpCode !== 200) {
+            $errorData = json_decode($response, true);
+            $errorMessage = $errorData['error']['message'] ?? 'HTTP Error ' . $httpCode;
+            return ['success' => false, 'message' => 'Lỗi API: ' . $errorMessage];
+        }
+
+        $result = json_decode($response, true);
+
+        if (!isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+            return ['success' => false, 'message' => 'Không thể đọc nội dung đơn thuốc'];
+        }
+
+        $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'];
+
+        return $this->parseAIResponse($aiResponse);
+    }
+
+    /**
+     * Build prompt for AI to extract prescription information
+     */
+    private function buildPrompt() {
+        return "Bạn là một trợ lý AI chuyên đọc và phân tích đơn thuốc. Hãy phân tích hình ảnh đơn thuốc này và trích xuất thông tin theo định dạng JSON sau:
+
+{
+    \"patient_info\": {
+        \"name\": \"Tên bệnh nhân (nếu có)\",
+        \"age\": \"Tuổi (nếu có)\",
+        \"gender\": \"Giới tính (nếu có)\",
+        \"address\": \"Địa chỉ (nếu có)\"
+    },
+    \"doctor_info\": {
+        \"name\": \"Tên bác sĩ (nếu có)\",
+        \"hospital\": \"Bệnh viện/Phòng khám (nếu có)\"
+    },
+    \"diagnosis\": \"Chẩn đoán (nếu có)\",
+    \"date\": \"Ngày kê đơn (nếu có)\",
+    \"medicines\": [
+        {
+            \"name\": \"Tên thuốc (viết đầy đủ, chuẩn hóa)\",
+            \"dosage\": \"Hàm lượng (ví dụ: 500mg, 10mg)\",
+            \"quantity\": \"Số lượng (số nguyên)\",
+            \"unit\": \"Đơn vị (viên, vỉ, hộp, chai, tuýp...)\",
+            \"usage\": \"Cách dùng (ví dụ: Ngày 2 lần, mỗi lần 1 viên)\",
+            \"notes\": \"Ghi chú thêm (nếu có)\"
+        }
+    ],
+    \"raw_text\": \"Toàn bộ nội dung text đọc được từ đơn thuốc\"
+}
+
+Lưu ý quan trọng:
+1. Chỉ trả về JSON, không có text thừa
+2. Tên thuốc cần được chuẩn hóa (viết hoa chữ cái đầu, bỏ ký tự thừa)
+3. Số lượng phải là số nguyên
+4. Nếu không đọc được thông tin nào, để giá trị null
+5. Nếu đơn thuốc viết tay khó đọc, cố gắng đoán dựa trên ngữ cảnh y khoa
+6. Với các tên thuốc viết tắt, hãy viết đầy đủ tên gốc
+
+Hãy phân tích hình ảnh đơn thuốc:";
+    }
+
+    /**
+     * Parse AI response to structured data
+     */
+    private function parseAIResponse($aiResponse) {
+        // Clean up response - remove markdown code blocks if present
+        $cleanResponse = $aiResponse;
+        $cleanResponse = preg_replace('/```json\s*/', '', $cleanResponse);
+        $cleanResponse = preg_replace('/```\s*/', '', $cleanResponse);
+        $cleanResponse = trim($cleanResponse);
+
+        $data = json_decode($cleanResponse, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Try to extract JSON from response
+            preg_match('/\{[\s\S]*\}/', $cleanResponse, $matches);
+            if (!empty($matches[0])) {
+                $data = json_decode($matches[0], true);
+            }
+        }
+
+        if (!$data || !isset($data['medicines'])) {
+            return [
+                'success' => false,
+                'message' => 'Không thể phân tích nội dung đơn thuốc. Vui lòng chụp ảnh rõ hơn.',
+                'raw_response' => $aiResponse
+            ];
+        }
+
+        return [
+            'success' => true,
+            'medicines' => $data['medicines'] ?? [],
+            'patient_info' => $data['patient_info'] ?? null,
+            'doctor_info' => $data['doctor_info'] ?? null,
+            'diagnosis' => $data['diagnosis'] ?? null,
+            'date' => $data['date'] ?? null,
+            'raw_text' => $data['raw_text'] ?? ''
+        ];
+    }
+
+    /**
+     * Scan PDF prescription (convert pages to images first)
+     */
+    private function scanPdfPrescription($file) {
+        // For PDF, we'll use the first page as image
+        // This requires Imagick extension or similar
+
+        if (!extension_loaded('imagick')) {
+            // Alternative: Read PDF as binary and send to Gemini
+            // Gemini 1.5 supports PDF directly
+            $fileContent = file_get_contents($file['tmp_name']);
+            $base64Data = base64_encode($fileContent);
+
+            return $this->analyzeWithGemini($base64Data, 'application/pdf');
+        }
+
+        try {
+            $imagick = new Imagick();
+            $imagick->setResolution(150, 150);
+            $imagick->readImage($file['tmp_name'] . '[0]'); // First page only
+            $imagick->setImageFormat('png');
+
+            $imageData = $imagick->getImageBlob();
+            $base64Data = base64_encode($imageData);
+
+            $imagick->destroy();
+
+            return $this->analyzeWithGemini($base64Data, 'image/png');
+        } catch (Exception $e) {
+            // Fallback: try sending PDF directly
+            $fileContent = file_get_contents($file['tmp_name']);
+            $base64Data = base64_encode($fileContent);
+
+            return $this->analyzeWithGemini($base64Data, 'application/pdf');
+        }
+    }
+
+    /**
+     * Match extracted medicines with database products
+     */
+    private function matchMedicinesWithDatabase($medicines) {
+        $matchedMedicines = [];
+
+        foreach ($medicines as $medicine) {
+            $medicineName = $medicine['name'] ?? '';
+            $dosage = $medicine['dosage'] ?? '';
+            $quantity = intval($medicine['quantity'] ?? 1);
+
+            if (empty($medicineName)) {
+                continue;
+            }
+
+            // Search for matching products in database
+            $products = $this->searchProducts($medicineName, $dosage);
+
+            $matchedMedicines[] = [
+                'original' => $medicine,
+                'name' => $medicineName,
+                'dosage' => $dosage,
+                'quantity' => $quantity,
+                'unit' => $medicine['unit'] ?? 'viên',
+                'usage' => $medicine['usage'] ?? '',
+                'notes' => $medicine['notes'] ?? '',
+                'matched_products' => $products,
+                'best_match' => !empty($products) ? $products[0] : null,
+                'match_status' => !empty($products) ? 'found' : 'not_found'
+            ];
+        }
+
+        return $matchedMedicines;
+    }
+
+    /**
+     * Search products in database by name and dosage
+     */
+    private function searchProducts($name, $dosage = '') {
+        // Normalize search term
+        $searchName = $this->normalizeSearchTerm($name);
+        $searchDosage = $this->normalizeSearchTerm($dosage);
+
+        // Build search query with LIKE and FULLTEXT
+        $query = "SELECT
+                    t.id,
+                    t.ten_thuoc,
+                    t.hoatchat,
+                    t.hamluong,
+                    t.hinhanh,
+                    t.mota,
+                    l.ten_loai,
+                    COALESCE(SUM(k.soluong), 0) as ton_kho,
+                    MIN(k.gia) as gia_nhap,
+                    t.gia as gia_ban,
+                    dv.ten_donvi
+                  FROM thuoc t
+                  LEFT JOIN loai_thuoc l ON t.loai_id = l.id
+                  LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
+                  LEFT JOIN donvi dv ON t.donvi_id = dv.id
+                  WHERE (
+                      t.ten_thuoc LIKE ?
+                      OR t.ten_thuoc LIKE ?
+                      OR t.hoatchat LIKE ?
+                  )";
+
+        $params = [
+            '%' . $searchName . '%',
+            $searchName . '%',
+            '%' . $searchName . '%'
+        ];
+
+        // Add dosage filter if provided
+        if (!empty($searchDosage)) {
+            $query .= " AND (t.hamluong LIKE ? OR t.ten_thuoc LIKE ?)";
+            $params[] = '%' . $searchDosage . '%';
+            $params[] = '%' . $searchDosage . '%';
+        }
+
+        $query .= " GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.hamluong, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+                    ORDER BY
+                        CASE
+                            WHEN t.ten_thuoc LIKE ? THEN 1
+                            WHEN t.ten_thuoc LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        ton_kho DESC
+                    LIMIT 5";
+
+        $params[] = $searchName . '%';
+        $params[] = '%' . $searchName . '%';
+
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute($params);
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Calculate match score for each product
+            foreach ($products as &$product) {
+                $product['match_score'] = $this->calculateMatchScore($name, $dosage, $product);
+                $product['ton_kho'] = intval($product['ton_kho']);
+                $product['gia_ban'] = floatval($product['gia_ban']);
+            }
+
+            // Sort by match score
+            usort($products, function($a, $b) {
+                return $b['match_score'] - $a['match_score'];
+            });
+
+            return $products;
+        } catch (Exception $e) {
+            error_log('Search products error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Normalize search term for better matching
+     */
+    private function normalizeSearchTerm($term) {
+        // Remove extra spaces
+        $term = preg_replace('/\s+/', ' ', trim($term));
+
+        // Convert to lowercase for comparison
+        $term = mb_strtolower($term, 'UTF-8');
+
+        // Remove common suffixes/prefixes
+        $term = preg_replace('/\s*(viên|vỉ|hộp|chai|tuýp|gói|ống)\s*$/i', '', $term);
+
+        return $term;
+    }
+
+    /**
+     * Calculate match score between prescription item and database product
+     */
+    private function calculateMatchScore($prescriptionName, $prescriptionDosage, $product) {
+        $score = 0;
+
+        $productName = mb_strtolower($product['ten_thuoc'], 'UTF-8');
+        $productDosage = mb_strtolower($product['hamluong'] ?? '', 'UTF-8');
+        $productIngredient = mb_strtolower($product['hoatchat'] ?? '', 'UTF-8');
+
+        $searchName = mb_strtolower($prescriptionName, 'UTF-8');
+        $searchDosage = mb_strtolower($prescriptionDosage, 'UTF-8');
+
+        // Exact name match
+        if ($productName === $searchName) {
+            $score += 100;
+        }
+        // Name starts with search term
+        elseif (strpos($productName, $searchName) === 0) {
+            $score += 80;
+        }
+        // Name contains search term
+        elseif (strpos($productName, $searchName) !== false) {
+            $score += 60;
+        }
+        // Ingredient match
+        elseif (strpos($productIngredient, $searchName) !== false) {
+            $score += 50;
+        }
+
+        // Dosage match
+        if (!empty($searchDosage) && !empty($productDosage)) {
+            if (strpos($productDosage, $searchDosage) !== false ||
+                strpos($productName, $searchDosage) !== false) {
+                $score += 30;
+            }
+        }
+
+        // Stock availability bonus
+        if ($product['ton_kho'] > 0) {
+            $score += 10;
+        }
+
+        return $score;
+    }
+
+    /**
+     * Save scanned prescription to history
+     */
+    public function saveScanHistory($data, $userId = null) {
+        try {
+            $query = "INSERT INTO prescription_scan_history
+                      (user_id, scan_data, medicines_count, created_at)
+                      VALUES (?, ?, ?, NOW())";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                $userId,
+                json_encode($data, JSON_UNESCAPED_UNICODE),
+                count($data['medicines'] ?? [])
+            ]);
+
+            return $this->conn->lastInsertId();
+        } catch (Exception $e) {
+            error_log('Save scan history error: ' . $e->getMessage());
+            return false;
+        }
+    }
+}

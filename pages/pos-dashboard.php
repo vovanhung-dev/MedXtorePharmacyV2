@@ -78,6 +78,9 @@ $pageTitle = "POS - Bán hàng tại quầy";
                 </span>
             </div>
             <div class="header-right">
+                <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#prescriptionScannerModal">
+                    <i class="bi bi-file-earmark-medical"></i> Scan Đơn Thuốc
+                </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="location.href='../index.php'">
                     <i class="bi bi-house"></i> Trang chủ
                 </button>
@@ -422,6 +425,156 @@ $pageTitle = "POS - Bán hàng tại quầy";
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="button" class="btn btn-warning" onclick="confirmHoldBill()">
                         <i class="bi bi-check-circle"></i> Tạm giữ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prescription Scanner Modal -->
+    <div class="modal fade" id="prescriptionScannerModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-medical"></i> Đọc Đơn Thuốc Bằng AI
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Upload Section -->
+                    <div id="prescriptionUploadSection">
+                        <!-- Hidden file input - placed outside dropzone -->
+                        <input type="file" id="prescriptionFile" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" style="display: none;" onchange="handlePrescriptionFileChange(this)">
+
+                        <div class="upload-area" id="prescriptionDropZone">
+                            <div class="upload-content" onclick="openPrescriptionFileDialog(event)">
+                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #17a2b8;"></i>
+                                <h5>Tải lên đơn thuốc</h5>
+                                <p class="text-muted">Kéo thả file hoặc click để chọn</p>
+                                <p class="small text-muted">Hỗ trợ: JPG, PNG, PDF (tối đa 10MB)</p>
+                            </div>
+                            <button type="button" class="btn btn-info mt-3" onclick="openPrescriptionFileDialog(event)">
+                                <i class="bi bi-folder2-open"></i> Chọn file
+                            </button>
+                        </div>
+
+                        <!-- Preview -->
+                        <div id="prescriptionPreview" style="display: none;" class="mt-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span id="prescriptionFileName" class="text-muted"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearPrescriptionFile()">
+                                    <i class="bi bi-x"></i> Xóa
+                                </button>
+                            </div>
+                            <div id="prescriptionImagePreview" class="text-center">
+                                <img id="prescriptionPreviewImg" src="" style="max-height: 300px; max-width: 100%; border-radius: 8px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scanning Progress -->
+                    <div id="prescriptionScanningSection" style="display: none;">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-info" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Đang phân tích...</span>
+                            </div>
+                            <h5 class="mt-3">Đang phân tích đơn thuốc...</h5>
+                            <p class="text-muted">AI đang đọc và nhận diện các loại thuốc</p>
+                            <div class="progress mt-3" style="height: 10px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div id="prescriptionResultsSection" style="display: none;">
+                        <!-- Patient & Doctor Info -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white py-2">
+                                        <i class="bi bi-person"></i> Thông tin bệnh nhân
+                                    </div>
+                                    <div class="card-body py-2" id="patientInfoDisplay">
+                                        <small class="text-muted">Không có thông tin</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-secondary">
+                                    <div class="card-header bg-secondary text-white py-2">
+                                        <i class="bi bi-hospital"></i> Thông tin bác sĩ / Cơ sở
+                                    </div>
+                                    <div class="card-body py-2" id="doctorInfoDisplay">
+                                        <small class="text-muted">Không có thông tin</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Diagnosis -->
+                        <div id="diagnosisSection" class="mb-3" style="display: none;">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-clipboard2-pulse"></i> <strong>Chẩn đoán:</strong> <span id="diagnosisText"></span>
+                            </div>
+                        </div>
+
+                        <!-- Medicines List -->
+                        <div class="card">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-capsule"></i> Danh sách thuốc được nhận diện</span>
+                                <span class="badge bg-light text-dark" id="medicinesCount">0 thuốc</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0" id="scannedMedicinesTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 30px;">
+                                                    <input type="checkbox" id="selectAllMedicines" onchange="toggleSelectAllMedicines(this)">
+                                                </th>
+                                                <th>Thuốc trong đơn</th>
+                                                <th>Sản phẩm khớp</th>
+                                                <th style="width: 100px;">SL</th>
+                                                <th style="width: 120px;">Giá</th>
+                                                <th style="width: 120px;">Thành tiền</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="scannedMedicinesList">
+                                            <!-- Will be populated by JavaScript -->
+                                        </tbody>
+                                        <tfoot class="table-light">
+                                            <tr>
+                                                <td colspan="5" class="text-end"><strong>Tổng cộng (đã chọn):</strong></td>
+                                                <td><strong id="scannedMedicinesTotal">0đ</strong></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Raw Text (collapsible) -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rawTextCollapse">
+                                <i class="bi bi-file-text"></i> Xem văn bản gốc
+                            </button>
+                            <div class="collapse mt-2" id="rawTextCollapse">
+                                <div class="card card-body bg-light">
+                                    <pre id="prescriptionRawText" style="white-space: pre-wrap; font-size: 0.85rem; margin: 0;"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-info" id="scanPrescriptionBtn" onclick="scanPrescription()" disabled>
+                        <i class="bi bi-cpu"></i> Phân tích đơn thuốc
+                    </button>
+                    <button type="button" class="btn btn-success" id="addScannedToCartBtn" onclick="addScannedMedicinesToCart()" style="display: none;">
+                        <i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng
                     </button>
                 </div>
             </div>
@@ -1245,7 +1398,537 @@ $pageTitle = "POS - Bán hàng tại quầy";
                 const categoryValue = document.getElementById('categoryFilter').value;
                 loadProducts(searchValue, categoryValue);
             });
+
+            // Initialize prescription scanner
+            initPrescriptionScanner();
         });
+
+        // ==================== PRESCRIPTION SCANNER ====================
+
+        let scannedPrescriptionData = null;
+        let selectedPrescriptionFile = null;
+
+        // Open file dialog
+        function openPrescriptionFileDialog(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log('Opening file dialog...');
+            const fileInput = document.getElementById('prescriptionFile');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        // Handle file input change
+        function handlePrescriptionFileChange(input) {
+            console.log('File input changed', input.files);
+            if (input.files && input.files.length > 0) {
+                handlePrescriptionFile(input.files[0]);
+            }
+        }
+
+        function initPrescriptionScanner() {
+            console.log('Initializing prescription scanner...');
+            const dropZone = document.getElementById('prescriptionDropZone');
+
+            if (!dropZone) {
+                console.log('DropZone not found, will retry later');
+                return;
+            }
+
+            // Drag and drop handlers
+            dropZone.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+                console.log('File dropped');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handlePrescriptionFile(files[0]);
+                }
+            });
+
+            // Reset modal on close
+            const modal = document.getElementById('prescriptionScannerModal');
+            if (modal) {
+                modal.addEventListener('hidden.bs.modal', function() {
+                    resetPrescriptionScanner();
+                });
+            }
+
+            console.log('Prescription scanner initialized');
+        }
+
+        function handlePrescriptionFile(file) {
+            console.log('Handling file:', file.name, file.type, file.size);
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP) hoặc PDF\nLoại file nhận được: ' + file.type);
+                return;
+            }
+
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File không được vượt quá 10MB');
+                return;
+            }
+
+            selectedPrescriptionFile = file;
+
+            // Show preview
+            const fileNameEl = document.getElementById('prescriptionFileName');
+            const previewEl = document.getElementById('prescriptionPreview');
+            const imagePreviewDiv = document.getElementById('prescriptionImagePreview');
+
+            if (fileNameEl) {
+                fileNameEl.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+            }
+
+            if (previewEl) {
+                previewEl.style.display = 'block';
+            }
+
+            // Preview image or PDF icon
+            if (imagePreviewDiv) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreviewDiv.innerHTML = '<img src="' + e.target.result + '" style="max-height: 300px; max-width: 100%; border-radius: 8px;">';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreviewDiv.innerHTML = '<div class="p-4 bg-light rounded"><i class="bi bi-file-pdf text-danger" style="font-size: 4rem;"></i><p class="mt-2 mb-0">File PDF: ' + file.name + '</p></div>';
+                }
+            }
+
+            // Enable scan button
+            const scanBtn = document.getElementById('scanPrescriptionBtn');
+            if (scanBtn) {
+                scanBtn.disabled = false;
+            }
+
+            console.log('File ready for scanning');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function clearPrescriptionFile() {
+            selectedPrescriptionFile = null;
+            const fileInput = document.getElementById('prescriptionFile');
+            if (fileInput) fileInput.value = '';
+
+            const previewEl = document.getElementById('prescriptionPreview');
+            if (previewEl) previewEl.style.display = 'none';
+
+            const scanBtn = document.getElementById('scanPrescriptionBtn');
+            if (scanBtn) scanBtn.disabled = true;
+        }
+
+        function resetPrescriptionScanner() {
+            clearPrescriptionFile();
+            scannedPrescriptionData = null;
+
+            const uploadSection = document.getElementById('prescriptionUploadSection');
+            const scanningSection = document.getElementById('prescriptionScanningSection');
+            const resultsSection = document.getElementById('prescriptionResultsSection');
+            const scanBtn = document.getElementById('scanPrescriptionBtn');
+            const addBtn = document.getElementById('addScannedToCartBtn');
+            const medicinesList = document.getElementById('scannedMedicinesList');
+
+            if (uploadSection) uploadSection.style.display = 'block';
+            if (scanningSection) scanningSection.style.display = 'none';
+            if (resultsSection) resultsSection.style.display = 'none';
+            if (scanBtn) scanBtn.style.display = 'inline-block';
+            if (addBtn) addBtn.style.display = 'none';
+            if (medicinesList) medicinesList.innerHTML = '';
+        }
+
+        async function scanPrescription() {
+            if (!selectedPrescriptionFile) {
+                alert('Vui lòng chọn file đơn thuốc');
+                return;
+            }
+
+            // Show scanning section
+            document.getElementById('prescriptionUploadSection').style.display = 'none';
+            document.getElementById('prescriptionScanningSection').style.display = 'block';
+            document.getElementById('prescriptionResultsSection').style.display = 'none';
+            document.getElementById('scanPrescriptionBtn').disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('prescription', selectedPrescriptionFile);
+                formData.append('action', 'scan');
+
+                const response = await fetch('/api/pos/scan-prescription.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    scannedPrescriptionData = result;
+                    displayScanResults(result);
+                } else {
+                    alert('Lỗi: ' + (result.message || 'Không thể phân tích đơn thuốc'));
+                    resetPrescriptionScanner();
+                }
+            } catch (error) {
+                console.error('Scan error:', error);
+                alert('Lỗi kết nối: ' + error.message);
+                resetPrescriptionScanner();
+            }
+        }
+
+        function displayScanResults(data) {
+            // Hide scanning, show results
+            document.getElementById('prescriptionScanningSection').style.display = 'none';
+            document.getElementById('prescriptionResultsSection').style.display = 'block';
+
+            // Display patient info
+            const patientInfo = data.patient_info;
+            const patientDiv = document.getElementById('patientInfoDisplay');
+            if (patientInfo && (patientInfo.name || patientInfo.age || patientInfo.gender)) {
+                let html = '';
+                if (patientInfo.name) html += `<div><strong>Tên:</strong> ${patientInfo.name}</div>`;
+                if (patientInfo.age) html += `<div><strong>Tuổi:</strong> ${patientInfo.age}</div>`;
+                if (patientInfo.gender) html += `<div><strong>Giới tính:</strong> ${patientInfo.gender}</div>`;
+                if (patientInfo.address) html += `<div><strong>Địa chỉ:</strong> ${patientInfo.address}</div>`;
+                patientDiv.innerHTML = html;
+            } else {
+                patientDiv.innerHTML = '<small class="text-muted">Không có thông tin</small>';
+            }
+
+            // Display doctor info
+            const doctorInfo = data.doctor_info;
+            const doctorDiv = document.getElementById('doctorInfoDisplay');
+            if (doctorInfo && (doctorInfo.name || doctorInfo.hospital)) {
+                let html = '';
+                if (doctorInfo.name) html += `<div><strong>Bác sĩ:</strong> ${doctorInfo.name}</div>`;
+                if (doctorInfo.hospital) html += `<div><strong>Cơ sở:</strong> ${doctorInfo.hospital}</div>`;
+                if (data.date) html += `<div><strong>Ngày:</strong> ${data.date}</div>`;
+                doctorDiv.innerHTML = html;
+            } else {
+                doctorDiv.innerHTML = '<small class="text-muted">Không có thông tin</small>';
+            }
+
+            // Display diagnosis
+            if (data.diagnosis) {
+                document.getElementById('diagnosisSection').style.display = 'block';
+                document.getElementById('diagnosisText').textContent = data.diagnosis;
+            } else {
+                document.getElementById('diagnosisSection').style.display = 'none';
+            }
+
+            // Display medicines
+            const medicines = data.medicines || [];
+            document.getElementById('medicinesCount').textContent = medicines.length + ' thuốc';
+
+            const tbody = document.getElementById('scannedMedicinesList');
+            tbody.innerHTML = '';
+
+            medicines.forEach((med, index) => {
+                const bestMatch = med.best_match;
+                const hasMatch = bestMatch && med.match_status === 'found';
+                const price = hasMatch ? bestMatch.gia_ban : 0;
+                const total = price * med.quantity;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="medicine-checkbox" data-index="${index}"
+                               ${hasMatch ? 'checked' : ''} ${!hasMatch ? 'disabled' : ''}
+                               onchange="updateScannedTotal()">
+                    </td>
+                    <td>
+                        <div><strong>${med.name}</strong></div>
+                        <small class="text-muted">
+                            ${med.dosage ? 'Hàm lượng: ' + med.dosage : ''}
+                            ${med.usage ? '<br>Cách dùng: ' + med.usage : ''}
+                        </small>
+                    </td>
+                    <td>
+                        ${hasMatch ? `
+                            <div class="d-flex align-items-center">
+                                ${bestMatch.hinhanh ? `<img src="/assets/images/product-images/${bestMatch.hinhanh}" class="me-2" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">` : ''}
+                                <div>
+                                    <strong>${bestMatch.ten_thuoc}</strong>
+                                    <small class="d-block text-muted">${bestMatch.ten_loai || ''}</small>
+                                    <small class="d-block ${bestMatch.ton_kho > 0 ? 'text-success' : 'text-danger'}">
+                                        Tồn kho: ${bestMatch.ton_kho}
+                                    </small>
+                                </div>
+                            </div>
+                            <select class="form-select form-select-sm mt-1 product-select" data-index="${index}" onchange="changeMatchedProduct(${index}, this.value)">
+                                ${med.matched_products.map((p, i) => `
+                                    <option value="${i}" ${i === 0 ? 'selected' : ''}>
+                                        ${p.ten_thuoc} - ${formatCurrency(p.gia_ban)} (Tồn: ${p.ton_kho})
+                                    </option>
+                                `).join('')}
+                            </select>
+                        ` : `
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-exclamation-triangle"></i> Không tìm thấy
+                            </span>
+                            <button class="btn btn-sm btn-outline-primary mt-1" onclick="searchAlternativeProduct(${index}, '${med.name.replace(/'/g, "\\'")}')">
+                                <i class="bi bi-search"></i> Tìm thủ công
+                            </button>
+                        `}
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm quantity-input"
+                               data-index="${index}" value="${med.quantity}" min="1"
+                               onchange="updateScannedTotal()" ${!hasMatch ? 'disabled' : ''}>
+                    </td>
+                    <td class="price-cell" data-index="${index}">
+                        ${hasMatch ? formatCurrency(price) : '-'}
+                    </td>
+                    <td class="total-cell" data-index="${index}">
+                        ${hasMatch ? formatCurrency(total) : '-'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Raw text
+            document.getElementById('prescriptionRawText').textContent = data.raw_text || 'Không có dữ liệu';
+
+            // Update total and show add button
+            updateScannedTotal();
+            document.getElementById('scanPrescriptionBtn').style.display = 'none';
+            document.getElementById('addScannedToCartBtn').style.display = 'inline-block';
+        }
+
+        function changeMatchedProduct(medicineIndex, productIndex) {
+            if (!scannedPrescriptionData) return;
+
+            const med = scannedPrescriptionData.medicines[medicineIndex];
+            const newProduct = med.matched_products[productIndex];
+
+            if (newProduct) {
+                med.best_match = newProduct;
+
+                // Update display
+                const row = document.querySelector(`tr:has(.medicine-checkbox[data-index="${medicineIndex}"])`);
+                if (row) {
+                    const quantity = parseInt(row.querySelector('.quantity-input').value) || 1;
+                    const price = newProduct.gia_ban;
+
+                    row.querySelector('.price-cell').textContent = formatCurrency(price);
+                    row.querySelector('.total-cell').textContent = formatCurrency(price * quantity);
+                }
+            }
+
+            updateScannedTotal();
+        }
+
+        function toggleSelectAllMedicines(checkbox) {
+            const allCheckboxes = document.querySelectorAll('.medicine-checkbox:not(:disabled)');
+            allCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            updateScannedTotal();
+        }
+
+        function updateScannedTotal() {
+            if (!scannedPrescriptionData) return;
+
+            let total = 0;
+            const checkboxes = document.querySelectorAll('.medicine-checkbox:checked');
+
+            checkboxes.forEach(cb => {
+                const index = parseInt(cb.dataset.index);
+                const med = scannedPrescriptionData.medicines[index];
+                const quantityInput = document.querySelector(`.quantity-input[data-index="${index}"]`);
+                const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : med.quantity;
+
+                if (med.best_match) {
+                    const itemTotal = med.best_match.gia_ban * quantity;
+                    total += itemTotal;
+
+                    // Update row total
+                    const totalCell = document.querySelector(`.total-cell[data-index="${index}"]`);
+                    if (totalCell) {
+                        totalCell.textContent = formatCurrency(itemTotal);
+                    }
+                }
+            });
+
+            document.getElementById('scannedMedicinesTotal').textContent = formatCurrency(total);
+        }
+
+        async function searchAlternativeProduct(medicineIndex, searchTerm) {
+            const newTerm = prompt('Nhập tên thuốc cần tìm:', searchTerm);
+            if (!newTerm) return;
+
+            try {
+                const response = await fetch('/api/pos/scan-prescription.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'search_product',
+                        search: newTerm
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.products && result.products.length > 0) {
+                    // Update the medicine with new matches
+                    scannedPrescriptionData.medicines[medicineIndex].matched_products = result.products;
+                    scannedPrescriptionData.medicines[medicineIndex].best_match = result.products[0];
+                    scannedPrescriptionData.medicines[medicineIndex].match_status = 'found';
+
+                    // Redisplay results
+                    displayScanResults(scannedPrescriptionData);
+                    alert('Đã tìm thấy ' + result.products.length + ' sản phẩm phù hợp');
+                } else {
+                    alert('Không tìm thấy sản phẩm nào với từ khóa: ' + newTerm);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('Lỗi tìm kiếm: ' + error.message);
+            }
+        }
+
+        async function addScannedMedicinesToCart() {
+            if (!scannedPrescriptionData) return;
+
+            const checkedBoxes = document.querySelectorAll('.medicine-checkbox:checked');
+            if (checkedBoxes.length === 0) {
+                alert('Vui lòng chọn ít nhất một thuốc để thêm vào giỏ');
+                return;
+            }
+
+            const medicines = [];
+            checkedBoxes.forEach(cb => {
+                const index = parseInt(cb.dataset.index);
+                const med = scannedPrescriptionData.medicines[index];
+                const quantityInput = document.querySelector(`.quantity-input[data-index="${index}"]`);
+                const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : med.quantity;
+
+                if (med.best_match) {
+                    medicines.push({
+                        product_id: med.best_match.id,
+                        name: med.best_match.ten_thuoc,
+                        quantity: quantity
+                    });
+                }
+            });
+
+            if (medicines.length === 0) {
+                alert('Không có thuốc hợp lệ để thêm');
+                return;
+            }
+
+            const addBtn = document.getElementById('addScannedToCartBtn');
+            addBtn.disabled = true;
+            addBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang thêm...';
+
+            try {
+                const response = await fetch('/api/pos/scan-prescription.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'add_to_cart',
+                        medicines: medicines
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Đã thêm ${result.added_count} thuốc vào giỏ hàng`);
+
+                    // Close modal and reload cart
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('prescriptionScannerModal'));
+                    if (modal) modal.hide();
+
+                    // Reload page to update cart
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (result.message || 'Không thể thêm vào giỏ'));
+                    if (result.errors && result.errors.length > 0) {
+                        console.error('Errors:', result.errors);
+                    }
+                }
+            } catch (error) {
+                console.error('Add to cart error:', error);
+                alert('Lỗi: ' + error.message);
+            } finally {
+                addBtn.disabled = false;
+                addBtn.innerHTML = '<i class="bi bi-cart-plus"></i> Thêm vào giỏ hàng';
+            }
+        }
     </script>
+
+    <style>
+    /* Prescription Scanner Styles */
+    .upload-area {
+        border: 2px dashed #17a2b8;
+        border-radius: 12px;
+        padding: 40px 40px 30px;
+        text-align: center;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover,
+    .upload-area.drag-over {
+        border-color: #0d6efd;
+        background: #e7f3ff;
+    }
+
+    .upload-area.drag-over {
+        transform: scale(1.02);
+    }
+
+    .upload-area .upload-content {
+        cursor: pointer;
+    }
+
+    #scannedMedicinesTable .form-select-sm {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    #scannedMedicinesTable td {
+        vertical-align: middle;
+    }
+
+    .product-select {
+        max-width: 250px;
+    }
+
+    #prescriptionScannerModal .modal-body {
+        min-height: 300px;
+    }
+    </style>
 </body>
 </html>
