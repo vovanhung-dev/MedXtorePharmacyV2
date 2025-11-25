@@ -1,11 +1,5 @@
 <?php
-/**
- * PrescriptionScanner - AI-powered prescription reader using Google Gemini Vision
- * Đọc và phân tích đơn thuốc từ hình ảnh/PDF sử dụng AI
- */
-
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../vendor/autoload.php';
 
 class PrescriptionScanner {
     private $conn;
@@ -15,45 +9,55 @@ class PrescriptionScanner {
     public function __construct() {
         $db = new Database();
         $this->conn = $db->getConnection();
-
-        // Load environment variables
-        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-        $dotenv->load();
-
-        $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+        $this->apiKey = $this->loadEnvVariable('GEMINI_API_KEY');
     }
 
-    /**
-     * Scan prescription from uploaded file (image or PDF)
-     * @param array $file - $_FILES array element
-     * @return array - Result with extracted medicines
-     */
+    private function loadEnvVariable($key) {
+        if (isset($_ENV[$key]) && !empty($_ENV[$key])) {
+            return $_ENV[$key];
+        }
+
+        $envFile = __DIR__ . '/../.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) {
+                    continue;
+                }
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = explode('=', $line, 2);
+                    $name = trim($name);
+                    $value = trim($value);
+                    if ($name === $key) {
+                        return $value;
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
     public function scanPrescription($file) {
         try {
-            // Validate file
             $validation = $this->validateFile($file);
             if (!$validation['success']) {
                 return $validation;
             }
 
-            // Get file content as base64
             $fileContent = file_get_contents($file['tmp_name']);
             $base64Data = base64_encode($fileContent);
             $mimeType = $file['type'];
 
-            // For PDF, we need to convert to image first or use different approach
             if ($mimeType === 'application/pdf') {
                 return $this->scanPdfPrescription($file);
             }
 
-            // Send to Gemini Vision API
             $extractedData = $this->analyzeWithGemini($base64Data, $mimeType);
 
             if (!$extractedData['success']) {
                 return $extractedData;
             }
 
-            // Match extracted medicines with database
             $matchedMedicines = $this->matchMedicinesWithDatabase($extractedData['medicines']);
 
             return [
@@ -75,9 +79,6 @@ class PrescriptionScanner {
         }
     }
 
-    /**
-     * Validate uploaded file
-     */
     private function validateFile($file) {
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
             return ['success' => false, 'message' => 'File không hợp lệ'];
@@ -92,7 +93,6 @@ class PrescriptionScanner {
             return ['success' => false, 'message' => 'Chỉ chấp nhận file ảnh (JPG, PNG, GIF, WEBP) hoặc PDF'];
         }
 
-        // Max 10MB
         $maxSize = 10 * 1024 * 1024;
         if ($file['size'] > $maxSize) {
             return ['success' => false, 'message' => 'File không được vượt quá 10MB'];
@@ -101,9 +101,6 @@ class PrescriptionScanner {
         return ['success' => true];
     }
 
-    /**
-     * Analyze image with Google Gemini Vision API
-     */
     private function analyzeWithGemini($base64Data, $mimeType) {
         if (empty($this->apiKey)) {
             return ['success' => false, 'message' => 'Chưa cấu hình API key cho Gemini AI'];
@@ -115,9 +112,7 @@ class PrescriptionScanner {
             'contents' => [
                 [
                     'parts' => [
-                        [
-                            'text' => $prompt
-                        ],
+                        ['text' => $prompt],
                         [
                             'inline_data' => [
                                 'mime_type' => $mimeType,
@@ -141,9 +136,7 @@ class PrescriptionScanner {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($requestData),
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json'
-            ],
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
             CURLOPT_TIMEOUT => 60
         ]);
 
@@ -173,9 +166,6 @@ class PrescriptionScanner {
         return $this->parseAIResponse($aiResponse);
     }
 
-    /**
-     * Build prompt for AI to extract prescription information
-     */
     private function buildPrompt() {
         return "Bạn là một trợ lý AI chuyên đọc và phân tích đơn thuốc. Hãy phân tích hình ảnh đơn thuốc này và trích xuất thông tin theo định dạng JSON sau:
 
@@ -216,11 +206,7 @@ Lưu ý quan trọng:
 Hãy phân tích hình ảnh đơn thuốc:";
     }
 
-    /**
-     * Parse AI response to structured data
-     */
     private function parseAIResponse($aiResponse) {
-        // Clean up response - remove markdown code blocks if present
         $cleanResponse = $aiResponse;
         $cleanResponse = preg_replace('/```json\s*/', '', $cleanResponse);
         $cleanResponse = preg_replace('/```\s*/', '', $cleanResponse);
@@ -229,7 +215,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $data = json_decode($cleanResponse, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            // Try to extract JSON from response
             preg_match('/\{[\s\S]*\}/', $cleanResponse, $matches);
             if (!empty($matches[0])) {
                 $data = json_decode($matches[0], true);
@@ -255,26 +240,17 @@ Hãy phân tích hình ảnh đơn thuốc:";
         ];
     }
 
-    /**
-     * Scan PDF prescription (convert pages to images first)
-     */
     private function scanPdfPrescription($file) {
-        // For PDF, we'll use the first page as image
-        // This requires Imagick extension or similar
-
         if (!extension_loaded('imagick')) {
-            // Alternative: Read PDF as binary and send to Gemini
-            // Gemini 1.5 supports PDF directly
             $fileContent = file_get_contents($file['tmp_name']);
             $base64Data = base64_encode($fileContent);
-
             return $this->analyzeWithGemini($base64Data, 'application/pdf');
         }
 
         try {
             $imagick = new Imagick();
             $imagick->setResolution(150, 150);
-            $imagick->readImage($file['tmp_name'] . '[0]'); // First page only
+            $imagick->readImage($file['tmp_name'] . '[0]');
             $imagick->setImageFormat('png');
 
             $imageData = $imagick->getImageBlob();
@@ -284,17 +260,12 @@ Hãy phân tích hình ảnh đơn thuốc:";
 
             return $this->analyzeWithGemini($base64Data, 'image/png');
         } catch (Exception $e) {
-            // Fallback: try sending PDF directly
             $fileContent = file_get_contents($file['tmp_name']);
             $base64Data = base64_encode($fileContent);
-
             return $this->analyzeWithGemini($base64Data, 'application/pdf');
         }
     }
 
-    /**
-     * Match extracted medicines with database products
-     */
     private function matchMedicinesWithDatabase($medicines) {
         $matchedMedicines = [];
 
@@ -307,7 +278,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
                 continue;
             }
 
-            // Search for matching products in database
             $products = $this->searchProducts($medicineName, $dosage);
 
             $matchedMedicines[] = [
@@ -327,15 +297,10 @@ Hãy phân tích hình ảnh đơn thuốc:";
         return $matchedMedicines;
     }
 
-    /**
-     * Search products in database by name and dosage
-     */
     private function searchProducts($name, $dosage = '') {
-        // Normalize search term
         $searchName = $this->normalizeSearchTerm($name);
         $searchDosage = $this->normalizeSearchTerm($dosage);
 
-        // Build search query with LIKE and FULLTEXT
         $query = "SELECT
                     t.id,
                     t.ten_thuoc,
@@ -364,7 +329,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
             '%' . $searchName . '%'
         ];
 
-        // Add dosage filter if provided
         if (!empty($searchDosage)) {
             $query .= " AND (t.hamluong LIKE ? OR t.ten_thuoc LIKE ?)";
             $params[] = '%' . $searchDosage . '%';
@@ -389,14 +353,12 @@ Hãy phân tích hình ảnh đơn thuốc:";
             $stmt->execute($params);
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Calculate match score for each product
             foreach ($products as &$product) {
                 $product['match_score'] = $this->calculateMatchScore($name, $dosage, $product);
                 $product['ton_kho'] = intval($product['ton_kho']);
                 $product['gia_ban'] = floatval($product['gia_ban']);
             }
 
-            // Sort by match score
             usort($products, function($a, $b) {
                 return $b['match_score'] - $a['match_score'];
             });
@@ -408,25 +370,13 @@ Hãy phân tích hình ảnh đơn thuốc:";
         }
     }
 
-    /**
-     * Normalize search term for better matching
-     */
     private function normalizeSearchTerm($term) {
-        // Remove extra spaces
         $term = preg_replace('/\s+/', ' ', trim($term));
-
-        // Convert to lowercase for comparison
         $term = mb_strtolower($term, 'UTF-8');
-
-        // Remove common suffixes/prefixes
         $term = preg_replace('/\s*(viên|vỉ|hộp|chai|tuýp|gói|ống)\s*$/i', '', $term);
-
         return $term;
     }
 
-    /**
-     * Calculate match score between prescription item and database product
-     */
     private function calculateMatchScore($prescriptionName, $prescriptionDosage, $product) {
         $score = 0;
 
@@ -437,24 +387,16 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $searchName = mb_strtolower($prescriptionName, 'UTF-8');
         $searchDosage = mb_strtolower($prescriptionDosage, 'UTF-8');
 
-        // Exact name match
         if ($productName === $searchName) {
             $score += 100;
-        }
-        // Name starts with search term
-        elseif (strpos($productName, $searchName) === 0) {
+        } elseif (strpos($productName, $searchName) === 0) {
             $score += 80;
-        }
-        // Name contains search term
-        elseif (strpos($productName, $searchName) !== false) {
+        } elseif (strpos($productName, $searchName) !== false) {
             $score += 60;
-        }
-        // Ingredient match
-        elseif (strpos($productIngredient, $searchName) !== false) {
+        } elseif (strpos($productIngredient, $searchName) !== false) {
             $score += 50;
         }
 
-        // Dosage match
         if (!empty($searchDosage) && !empty($productDosage)) {
             if (strpos($productDosage, $searchDosage) !== false ||
                 strpos($productName, $searchDosage) !== false) {
@@ -462,7 +404,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
             }
         }
 
-        // Stock availability bonus
         if ($product['ton_kho'] > 0) {
             $score += 10;
         }
@@ -470,9 +411,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
         return $score;
     }
 
-    /**
-     * Save scanned prescription to history
-     */
     public function saveScanHistory($data, $userId = null) {
         try {
             $query = "INSERT INTO prescription_scan_history
