@@ -17,6 +17,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../models/PrescriptionScanner.php';
 require_once __DIR__ . '/../../controllers/POSController.php';
 
@@ -63,7 +64,7 @@ try {
 
             case 'add_to_cart':
                 // Add scanned medicines to cart
-                $input = json_decode(file_get_contents('php://input'), true);
+                $input = $jsonInput ?: json_decode(file_get_contents('php://input'), true);
 
                 if (empty($input['medicines'])) {
                     echo json_encode(['success' => false, 'message' => 'Không có thuốc để thêm']);
@@ -74,26 +75,63 @@ try {
                 $errors = [];
 
                 foreach ($input['medicines'] as $medicine) {
-                    if (empty($medicine['product_id'])) {
+                    $productId = $medicine['product_id'] ?? null;
+                    $medicineName = $medicine['name'] ?? 'Unknown';
+
+                    if (empty($productId)) {
+                        $errors[] = $medicineName . ': Chưa chọn sản phẩm';
                         continue;
                     }
 
+                    // Get product details with price and unit from database
+                    $productQuery = "SELECT
+                                        t.id as thuoc_id,
+                                        t.ten_thuoc,
+                                        t.hinhanh,
+                                        td.donvi_id,
+                                        td.gia,
+                                        dv.ten_donvi
+                                    FROM thuoc t
+                                    JOIN thuoc_donvi td ON t.id = td.thuoc_id
+                                    JOIN donvi dv ON td.donvi_id = dv.id
+                                    WHERE t.id = ?
+                                    ORDER BY td.gia ASC
+                                    LIMIT 1";
+
+                    $db = new Database();
+                    $conn = $db->getConnection();
+                    $stmt = $conn->prepare($productQuery);
+                    $stmt->execute([$productId]);
+                    $productData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$productData) {
+                        $errors[] = $medicineName . ': Không tìm thấy thông tin sản phẩm';
+                        continue;
+                    }
+
+                    $quantity = intval($medicine['quantity'] ?? 1);
+                    if ($quantity < 1) $quantity = 1;
+
                     $addResult = $posController->addToCart([
-                        'product_id' => $medicine['product_id'],
-                        'quantity' => $medicine['quantity'] ?? 1,
-                        'batch_id' => $medicine['batch_id'] ?? null
+                        'thuoc_id' => $productData['thuoc_id'],
+                        'donvi_id' => $productData['donvi_id'],
+                        'gia' => $productData['gia'],
+                        'soluong' => $quantity,
+                        'ten_thuoc' => $productData['ten_thuoc'],
+                        'ten_donvi' => $productData['ten_donvi'],
+                        'hinhanh' => $productData['hinhanh']
                     ]);
 
                     if ($addResult['success']) {
                         $addedCount++;
                     } else {
-                        $errors[] = $medicine['name'] . ': ' . ($addResult['message'] ?? 'Lỗi thêm vào giỏ');
+                        $errors[] = $medicineName . ': ' . ($addResult['message'] ?? 'Lỗi thêm vào giỏ');
                     }
                 }
 
                 echo json_encode([
                     'success' => $addedCount > 0,
-                    'message' => "Đã thêm $addedCount thuốc vào giỏ hàng",
+                    'message' => $addedCount > 0 ? "Đã thêm $addedCount thuốc vào giỏ hàng" : "Không thể thêm thuốc vào giỏ",
                     'added_count' => $addedCount,
                     'errors' => $errors
                 ]);
