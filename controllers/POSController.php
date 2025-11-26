@@ -955,4 +955,81 @@ class POSController {
             ];
         }
     }
+
+    // ===================================
+    // SEARCH PRODUCTS (for prescription scanner)
+    // ===================================
+    public function searchProducts($searchTerm, $dosage = '', $limit = 10) {
+        try {
+            // Normalize search term
+            $searchTerm = trim($searchTerm);
+            $searchTerm = mb_strtolower($searchTerm, 'UTF-8');
+
+            // Search query - match by name, active ingredient
+            $query = "SELECT
+                        t.id,
+                        t.ten_thuoc,
+                        t.hoatchat,
+                        t.hamluong,
+                        t.hinhanh,
+                        t.mota,
+                        l.ten_loai,
+                        COALESCE(SUM(k.soluong), 0) as ton_kho,
+                        t.gia as gia_ban,
+                        dv.ten_donvi
+                      FROM thuoc t
+                      LEFT JOIN loai_thuoc l ON t.loai_id = l.id
+                      LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
+                      LEFT JOIN donvi dv ON t.donvi_id = dv.id
+                      WHERE (
+                          LOWER(t.ten_thuoc) LIKE ?
+                          OR LOWER(t.ten_thuoc) LIKE ?
+                          OR LOWER(t.hoatchat) LIKE ?
+                      )";
+
+            $params = [
+                '%' . $searchTerm . '%',
+                $searchTerm . '%',
+                '%' . $searchTerm . '%'
+            ];
+
+            // Add dosage filter if provided
+            if (!empty($dosage)) {
+                $dosage = mb_strtolower(trim($dosage), 'UTF-8');
+                $query .= " AND (LOWER(t.hamluong) LIKE ? OR LOWER(t.ten_thuoc) LIKE ?)";
+                $params[] = '%' . $dosage . '%';
+                $params[] = '%' . $dosage . '%';
+            }
+
+            $query .= " GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.hamluong, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+                        ORDER BY
+                            CASE
+                                WHEN LOWER(t.ten_thuoc) LIKE ? THEN 1
+                                WHEN LOWER(t.ten_thuoc) LIKE ? THEN 2
+                                ELSE 3
+                            END,
+                            ton_kho DESC
+                        LIMIT ?";
+
+            $params[] = $searchTerm . '%';
+            $params[] = '%' . $searchTerm . '%';
+            $params[] = (int)$limit;
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute($params);
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Format results
+            foreach ($products as &$product) {
+                $product['ton_kho'] = intval($product['ton_kho']);
+                $product['gia_ban'] = floatval($product['gia_ban']);
+            }
+
+            return $products;
+
+        } catch (Exception $e) {
+            error_log('POSController searchProducts error: ' . $e->getMessage());
+            return [];
+        }
+    }
 }

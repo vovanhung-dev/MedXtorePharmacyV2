@@ -301,6 +301,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $searchName = $this->normalizeSearchTerm($name);
         $searchDosage = $this->normalizeSearchTerm($dosage);
 
+        // Use LOWER() for case-insensitive search on both sides
         $query = "SELECT
                     t.id,
                     t.ten_thuoc,
@@ -318,9 +319,9 @@ Hãy phân tích hình ảnh đơn thuốc:";
                   LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
                   LEFT JOIN donvi dv ON t.donvi_id = dv.id
                   WHERE (
-                      t.ten_thuoc LIKE ?
-                      OR t.ten_thuoc LIKE ?
-                      OR t.hoatchat LIKE ?
+                      LOWER(t.ten_thuoc) LIKE LOWER(?)
+                      OR LOWER(t.ten_thuoc) LIKE LOWER(?)
+                      OR LOWER(t.hoatchat) LIKE LOWER(?)
                   )";
 
         $params = [
@@ -330,7 +331,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
         ];
 
         if (!empty($searchDosage)) {
-            $query .= " AND (t.hamluong LIKE ? OR t.ten_thuoc LIKE ?)";
+            $query .= " AND (LOWER(t.hamluong) LIKE LOWER(?) OR LOWER(t.ten_thuoc) LIKE LOWER(?))";
             $params[] = '%' . $searchDosage . '%';
             $params[] = '%' . $searchDosage . '%';
         }
@@ -338,8 +339,8 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $query .= " GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.hamluong, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
                     ORDER BY
                         CASE
-                            WHEN t.ten_thuoc LIKE ? THEN 1
-                            WHEN t.ten_thuoc LIKE ? THEN 2
+                            WHEN LOWER(t.ten_thuoc) LIKE LOWER(?) THEN 1
+                            WHEN LOWER(t.ten_thuoc) LIKE LOWER(?) THEN 2
                             ELSE 3
                         END,
                         ton_kho DESC
