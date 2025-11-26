@@ -1,8 +1,6 @@
 <?php
 require_once('../admin/admin-auth.php');
 require_once __DIR__ . '/../config/config.php';
-include_once('../includes/ad-header.php');
-include_once('../includes/ad-sidebar.php');
 
 $page_title = "Thêm mã giảm giá mới";
 
@@ -64,6 +62,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save'])) {
         }
     }
 }
+
+// Include header và sidebar SAU KHI xử lý form
+include_once('../includes/ad-header.php');
+include_once('../includes/ad-sidebar.php');
 ?>
 
 <div class="container-fluid">

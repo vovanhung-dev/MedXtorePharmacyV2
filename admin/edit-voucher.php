@@ -1,8 +1,6 @@
 <?php
 require_once('../admin/admin-auth.php');
 require_once __DIR__ . '/../config/config.php';
-include_once('../includes/ad-header.php');
-include_once('../includes/ad-sidebar.php');
 
 $page_title = "Chỉnh sửa mã giảm giá";
 
@@ -59,6 +57,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save'])) {
         }
     }
 }
+
+// Include header và sidebar SAU KHI xử lý form
+include_once('../includes/ad-header.php');
+include_once('../includes/ad-sidebar.php');
 ?>
 
 <div class="container-fluid">
@@ -89,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save'])) {
                             <form action="edit-voucher.php?id=<?= $id ?>" method="post">
                                 <div class="mb-3">
                                     <label for="code" class="form-label">Mã giảm giá</label>
-                                    <input type="text" class="form-control code-field bg-light" id="code" 
+                                    <input type="text" class="form-control code-field bg-light" id="code"
                                            value="<?= htmlspecialchars($voucher['code']) ?>" readonly>
                                     <small class="text-muted">Không thể thay đổi mã sau khi tạo</small>
                                 </div>
