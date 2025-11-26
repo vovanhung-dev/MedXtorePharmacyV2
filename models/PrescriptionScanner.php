@@ -301,6 +301,12 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $searchName = $this->normalizeSearchTerm($name);
         $searchDosage = $this->normalizeSearchTerm($dosage);
 
+        error_log("=== PrescriptionScanner searchProducts ===");
+        error_log("Original name: " . $name);
+        error_log("Normalized searchName: " . $searchName);
+        error_log("Original dosage: " . $dosage);
+        error_log("Normalized searchDosage: " . $searchDosage);
+
         // Use LOWER() for case-insensitive search on both sides
         $query = "SELECT
                     t.id,
@@ -350,9 +356,17 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $params[] = '%' . $searchName . '%';
 
         try {
+            error_log("PrescriptionScanner SQL Query: " . $query);
+            error_log("PrescriptionScanner Params: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
             $stmt = $this->conn->prepare($query);
             $stmt->execute($params);
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            error_log("PrescriptionScanner Found " . count($products) . " products");
+            if (count($products) > 0) {
+                error_log("First product: " . json_encode($products[0], JSON_UNESCAPED_UNICODE));
+            }
 
             foreach ($products as &$product) {
                 $product['match_score'] = $this->calculateMatchScore($name, $dosage, $product);
@@ -367,6 +381,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
             return $products;
         } catch (Exception $e) {
             error_log('Search products error: ' . $e->getMessage());
+            error_log('Search products trace: ' . $e->getTraceAsString());
             return [];
         }
     }

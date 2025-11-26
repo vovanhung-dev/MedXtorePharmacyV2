@@ -102,6 +102,9 @@ try {
                 $input = json_decode(file_get_contents('php://input'), true);
                 $searchTerm = $input['search'] ?? '';
 
+                error_log("=== SEARCH PRODUCT DEBUG ===");
+                error_log("Search term received: " . $searchTerm);
+
                 if (empty($searchTerm)) {
                     echo json_encode(['success' => false, 'message' => 'Từ khóa tìm kiếm không được trống']);
                     break;
@@ -110,9 +113,16 @@ try {
                 // Use POSController to search products
                 $products = $posController->searchProducts($searchTerm, '', 10);
 
+                error_log("Products found: " . count($products));
+                error_log("Products data: " . json_encode($products, JSON_UNESCAPED_UNICODE));
+
                 echo json_encode([
                     'success' => true,
-                    'products' => $products
+                    'products' => $products,
+                    'debug' => [
+                        'search_term' => $searchTerm,
+                        'count' => count($products)
+                    ]
                 ]);
                 break;
 

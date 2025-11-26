@@ -1765,19 +1765,31 @@ $pageTitle = "POS - Bán hàng tại quầy";
             const newTerm = prompt('Nhập tên thuốc cần tìm:', searchTerm);
             if (!newTerm) return;
 
+            console.log('=== SEARCH ALTERNATIVE PRODUCT ===');
+            console.log('Medicine Index:', medicineIndex);
+            console.log('Search Term:', newTerm);
+
             try {
+                const requestBody = {
+                    action: 'search_product',
+                    search: newTerm
+                };
+                console.log('Request body:', JSON.stringify(requestBody));
+
                 const response = await fetch('/api/pos/scan-prescription.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'search_product',
-                        search: newTerm
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response result:', result);
+                console.log('Products count:', result.products ? result.products.length : 0);
+                console.log('Debug info:', result.debug);
 
                 if (result.success && result.products && result.products.length > 0) {
+                    console.log('Found products:', result.products);
                     // Update the medicine with new matches
                     scannedPrescriptionData.medicines[medicineIndex].matched_products = result.products;
                     scannedPrescriptionData.medicines[medicineIndex].best_match = result.products[0];
@@ -1787,7 +1799,8 @@ $pageTitle = "POS - Bán hàng tại quầy";
                     displayScanResults(scannedPrescriptionData);
                     alert('Đã tìm thấy ' + result.products.length + ' sản phẩm phù hợp');
                 } else {
-                    alert('Không tìm thấy sản phẩm nào với từ khóa: ' + newTerm);
+                    console.log('No products found. Full response:', result);
+                    alert('Không tìm thấy sản phẩm nào với từ khóa: ' + newTerm + '\n\nDebug: ' + JSON.stringify(result.debug || {}));
                 }
             } catch (error) {
                 console.error('Search error:', error);

@@ -963,7 +963,9 @@ class POSController {
         try {
             // Normalize search term
             $searchTerm = trim($searchTerm);
+            error_log("POSController searchProducts - Original term: " . $searchTerm);
             $searchTerm = mb_strtolower($searchTerm, 'UTF-8');
+            error_log("POSController searchProducts - Lowercased term: " . $searchTerm);
 
             // Search query - match by name, active ingredient
             $query = "SELECT
@@ -1015,9 +1017,14 @@ class POSController {
             $params[] = '%' . $searchTerm . '%';
             $params[] = (int)$limit;
 
+            error_log("POSController searchProducts - SQL Query: " . $query);
+            error_log("POSController searchProducts - Params: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
             $stmt = $this->conn->prepare($query);
             $stmt->execute($params);
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            error_log("POSController searchProducts - Found " . count($products) . " products");
 
             // Format results
             foreach ($products as &$product) {
@@ -1029,6 +1036,7 @@ class POSController {
 
         } catch (Exception $e) {
             error_log('POSController searchProducts error: ' . $e->getMessage());
+            error_log('POSController searchProducts trace: ' . $e->getTraceAsString());
             return [];
         }
     }
