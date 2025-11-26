@@ -38,7 +38,10 @@ require_once __DIR__ . '/../config/config.php';
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#"><i class="fas fa-users"></i> Khách Hàng</a>
+        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'manage-customers.php' ? 'active' : '' ?>" href="manage-customers.php">
+          <i class="fas fa-users"></i> Khách Hàng
+        </a>
+      </li>
       <li class="nav-item">
         <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'manage-vouchers.php' ? 'active' : '' ?>" href="manage-vouchers.php">
           <i class="fas fa-percent"></i> Khuyến Mãi
