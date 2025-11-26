@@ -25,7 +25,9 @@ try {
     $posController = new POSController();
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $action = $_POST['action'] ?? $_GET['action'] ?? 'scan';
+        // Check for JSON input first (for search_product action)
+        $jsonInput = json_decode(file_get_contents('php://input'), true);
+        $action = $jsonInput['action'] ?? $_POST['action'] ?? $_GET['action'] ?? 'scan';
 
         switch ($action) {
             case 'scan':
@@ -99,8 +101,7 @@ try {
 
             case 'search_product':
                 // Search for a single product by name
-                $input = json_decode(file_get_contents('php://input'), true);
-                $searchTerm = $input['search'] ?? '';
+                $searchTerm = $jsonInput['search'] ?? '';
 
                 error_log("=== SEARCH PRODUCT DEBUG ===");
                 error_log("Search term received: " . $searchTerm);

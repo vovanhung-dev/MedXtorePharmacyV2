@@ -967,7 +967,8 @@ class POSController {
             $searchTerm = mb_strtolower($searchTerm, 'UTF-8');
             error_log("POSController searchProducts - Lowercased term: " . $searchTerm);
 
-            // Search query - match by name, description (hoatchat may not exist)
+            // Search query - match by name, description
+            // Note: gia is in thuoc_donvi table, not in thuoc table
             $query = "SELECT
                         t.id,
                         t.ten_thuoc,
@@ -975,12 +976,13 @@ class POSController {
                         t.mota,
                         l.ten_loai,
                         COALESCE(SUM(k.soluong), 0) as ton_kho,
-                        t.gia as gia_ban,
+                        COALESCE(td.gia, 0) as gia_ban,
                         dv.ten_donvi
                       FROM thuoc t
                       LEFT JOIN loai_thuoc l ON t.loai_id = l.id
+                      LEFT JOIN thuoc_donvi td ON t.id = td.thuoc_id
+                      LEFT JOIN donvi dv ON td.donvi_id = dv.id
                       LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
-                      LEFT JOIN donvi dv ON t.donvi_id = dv.id
                       WHERE (
                           LOWER(t.ten_thuoc) LIKE ?
                           OR LOWER(t.ten_thuoc) LIKE ?
@@ -1000,7 +1002,7 @@ class POSController {
                 $params[] = '%' . $dosage . '%';
             }
 
-            $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+            $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, td.gia, dv.ten_donvi
                         ORDER BY
                             CASE
                                 WHEN LOWER(t.ten_thuoc) LIKE ? THEN 1

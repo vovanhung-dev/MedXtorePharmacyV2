@@ -308,6 +308,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
         error_log("Normalized searchDosage: " . $searchDosage);
 
         // Use LOWER() for case-insensitive search on both sides
+        // Note: gia is in thuoc_donvi table, not in thuoc table
         $query = "SELECT
                     t.id,
                     t.ten_thuoc,
@@ -316,12 +317,13 @@ Hãy phân tích hình ảnh đơn thuốc:";
                     l.ten_loai,
                     COALESCE(SUM(k.soluong), 0) as ton_kho,
                     MIN(k.gia) as gia_nhap,
-                    t.gia as gia_ban,
+                    COALESCE(td.gia, 0) as gia_ban,
                     dv.ten_donvi
                   FROM thuoc t
                   LEFT JOIN loai_thuoc l ON t.loai_id = l.id
+                  LEFT JOIN thuoc_donvi td ON t.id = td.thuoc_id
+                  LEFT JOIN donvi dv ON td.donvi_id = dv.id
                   LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
-                  LEFT JOIN donvi dv ON t.donvi_id = dv.id
                   WHERE (
                       LOWER(t.ten_thuoc) LIKE LOWER(?)
                       OR LOWER(t.ten_thuoc) LIKE LOWER(?)
@@ -339,7 +341,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
             $params[] = '%' . $searchDosage . '%';
         }
 
-        $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+        $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, td.gia, dv.ten_donvi
                     ORDER BY
                         CASE
                             WHEN LOWER(t.ten_thuoc) LIKE LOWER(?) THEN 1
