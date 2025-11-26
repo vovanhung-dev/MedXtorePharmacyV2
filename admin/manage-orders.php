@@ -8,7 +8,38 @@ requireAdmin();
 
 // Khởi tạo controller và lấy dữ liệu
 $orderController = new OrderController();
-$orders = $orderController->getAllOrders();
+
+// Search và filter
+$search = $_GET['search'] ?? '';
+$status_filter = $_GET['status'] ?? '';
+
+// Pagination
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$limit = 8;
+$offset = ($page - 1) * $limit;
+
+$allOrders = $orderController->getAllOrders();
+
+// Filter by search
+if (!empty($search)) {
+    $allOrders = array_filter($allOrders, function($order) use ($search) {
+        return stripos($order['ten_khachhang'], $search) !== false ||
+               stripos($order['sodienthoai'], $search) !== false ||
+               stripos($order['id'], $search) !== false;
+    });
+}
+
+// Filter by status
+if (!empty($status_filter)) {
+    $allOrders = array_filter($allOrders, function($order) use ($status_filter) {
+        return $order['trangthai'] === $status_filter;
+    });
+}
+
+$totalItems = count($allOrders);
+$totalPages = ceil($totalItems / $limit);
+$orders = array_slice($allOrders, $offset, $limit);
+
 $orderStats = $orderController->getOrderStats();
 
 include('../includes/ad-header.php');
@@ -365,10 +396,32 @@ include('../includes/ad-sidebar.php');
                 </div>
             </div>
 
+            <!-- Search và Filter -->
+            <div class="card p-3 shadow-sm mb-3">
+                <form method="GET" class="row g-2">
+                    <div class="col-md-6">
+                        <input type="text" name="search" class="form-control" placeholder="Tìm theo tên, SĐT, mã đơn..." value="<?= htmlspecialchars($search) ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="status" class="form-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="choxacnhan" <?= $status_filter === 'choxacnhan' ? 'selected' : '' ?>>Chờ xác nhận</option>
+                            <option value="dadat" <?= $status_filter === 'dadat' ? 'selected' : '' ?>>Đã đặt</option>
+                            <option value="danggiao" <?= $status_filter === 'danggiao' ? 'selected' : '' ?>>Đang giao</option>
+                            <option value="dagiao" <?= $status_filter === 'dagiao' ? 'selected' : '' ?>>Đã giao</option>
+                            <option value="dahuy" <?= $status_filter === 'dahuy' ? 'selected' : '' ?>>Đã hủy</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Tìm</button>
+                    </div>
+                </form>
+            </div>
+
             <!-- Bảng đơn hàng -->
-            <div class="table-container">
+            <div class="table-container card shadow-sm">
                 <div class="table-responsive">
-                    <table class="table table-hover orders-table" id="ordersTable">
+                    <table class="table table-hover orders-table mb-0">
                         <thead>
                             <tr>
                                 <th>Mã ĐH</th>
@@ -446,6 +499,32 @@ include('../includes/ad-sidebar.php');
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                <?php if ($totalItems > 0): ?>
+                <div class="card-footer">
+                    <?php if ($totalPages > 1): ?>
+                    <nav>
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?page=<?= $page - 1 ?>&search=<?= urlencode($search) ?>&status=<?= urlencode($status_filter) ?>">Trước</a>
+                            </li>
+                            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&status=<?= urlencode($status_filter) ?>"><?= $i ?></a>
+                                </li>
+                            <?php endfor; ?>
+                            <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?page=<?= $page + 1 ?>&search=<?= urlencode($search) ?>&status=<?= urlencode($status_filter) ?>">Sau</a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <?php endif; ?>
+                    <div class="text-center <?= $totalPages > 1 ? 'mt-2' : '' ?>">
+                        <small class="text-muted">Trang <?= $page ?> / <?= $totalPages ?> (Tổng <?= $totalItems ?> đơn hàng)</small>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -469,25 +548,136 @@ include('../includes/ad-sidebar.php');
 
 <script>
 $(document).ready(function() {
-    // Initialize DataTable with enhanced features
-    $('#ordersTable').DataTable({
-        "responsive": true,
-        "order": [[2, "desc"]],
-        "pageLength": 25,
-        "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
-        },
-        "dom": '<"d-flex justify-content-between align-items-center mb-3"lf>rtip',
-        "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
-        "columnDefs": [
-            { "orderable": false, "targets": [6] },
-            { "searchable": false, "targets": [6] }
-        ],
-        "drawCallback": function() {
-            // Reinitialize tooltips after table redraw
-            $('[data-bs-toggle="tooltip"]').tooltip();
-        }
+
+    // Enhanced order details modal
+    $('.view-order').click(function() {
+        const orderId = $(this).data('order-id');
+        const $modal = $('#orderModal');
+        const $modalBody = $('#orderDetails');
+
+        $modalBody.html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2">Đang tải thông tin đơn hàng...</p>
+            </div>
+        `);
+
+        $modal.modal('show');
+
+        $.get(`../controllers/OrderController.php?action=get_details&order_id=${orderId}`)
+            .done(function(response) {
+                try {
+                    const data = typeof response === 'string' ? JSON.parse(response) : response;
+                    if (data.success) {
+                        renderOrderDetails(data.data);
+                        // Render items
+                        if (data.items && data.items.length > 0) {
+                            let itemsHtml = '';
+                            data.items.forEach(item => {
+                                const thanhTien = item.dongia * item.soluong;
+                                itemsHtml += `
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                ${item.hinhanh ? `<img src="../${item.hinhanh}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px; border-radius: 5px;">` : ''}
+                                                <span>${item.ten_thuoc}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">${item.soluong}</td>
+                                        <td class="text-end">${new Intl.NumberFormat('vi-VN').format(item.dongia)}đ</td>
+                                        <td class="text-end">${new Intl.NumberFormat('vi-VN').format(thanhTien)}đ</td>
+                                    </tr>
+                                `;
+                            });
+                            $('#orderItemsList').html(itemsHtml);
+                        }
+                    } else {
+                        $modalBody.html(`
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                ${data.message || 'Có lỗi xảy ra khi tải dữ liệu'}
+                            </div>
+                        `);
+                    }
+                } catch (e) {
+                    console.error('Parse error:', e);
+                    $modalBody.html(response);
+                }
+            })
+            .fail(function() {
+                $modalBody.html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Có lỗi xảy ra khi tải dữ liệu
+                    </div>
+                `);
+            });
     });
+
+    function renderOrderDetails(data) {
+        // Map trạng thái
+        const statusMap = {
+            'choxacnhan': { text: 'Chờ xác nhận', class: 'warning' },
+            'dadat': { text: 'Đã đặt', class: 'success' },
+            'danggiao': { text: 'Đang giao', class: 'info' },
+            'dagiao': { text: 'Đã giao', class: 'primary' },
+            'dahuy': { text: 'Đã hủy', class: 'danger' }
+        };
+
+        const status = statusMap[data.trangthai] || { text: data.trangthai, class: 'secondary' };
+
+        $('#orderDetails').html(`
+            <div class="order-details">
+                <!-- Thông tin đơn hàng -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Thông tin đơn hàng</h6>
+                        <p class="mb-1"><strong>Mã đơn hàng:</strong> #${String(data.id).padStart(5, '0')}</p>
+                        <p class="mb-1"><strong>Ngày đặt:</strong> ${new Date(data.ngay_dat).toLocaleString('vi-VN')}</p>
+                        <p class="mb-1"><strong>Trạng thái:</strong> <span class="badge bg-${status.class}">${status.text}</span></p>
+                        <p class="mb-1"><strong>Thanh toán:</strong> <span class="badge bg-${data.phuongthuc_thanhtoan === 'cod' ? 'secondary' : 'primary'}">${data.phuongthuc_thanhtoan.toUpperCase()}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Thông tin khách hàng</h6>
+                        <p class="mb-1"><strong>Họ tên:</strong> ${data.ten_khachhang}</p>
+                        <p class="mb-1"><strong>Số điện thoại:</strong> ${data.sodienthoai}</p>
+                        <p class="mb-1"><strong>Email:</strong> ${data.email || 'N/A'}</p>
+                        <p class="mb-1"><strong>Địa chỉ:</strong> ${data.diachi}</p>
+                    </div>
+                </div>
+
+                <!-- Danh sách sản phẩm -->
+                <h6 class="text-muted mb-2">Sản phẩm đã đặt</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th class="text-center">Số lượng</th>
+                                <th class="text-end">Đơn giá</th>
+                                <th class="text-end">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderItemsList"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Tổng cộng:</strong></td>
+                                <td class="text-end"><strong>${new Intl.NumberFormat('vi-VN').format(data.tongtien)}đ</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Ghi chú -->
+                ${data.ghichu ? `
+                <div class="mt-3">
+                    <h6 class="text-muted mb-2">Ghi chú</h6>
+                    <p class="mb-0">${data.ghichu}</p>
+                </div>
+                ` : ''}
+            </div>
+        `);
+    }
 
     // Enhanced status update with animation
     $('.status-select').change(function() {
@@ -552,6 +742,27 @@ $(document).ready(function() {
                     const data = typeof response === 'string' ? JSON.parse(response) : response;
                     if (data.success) {
                         renderOrderDetails(data.data);
+                        // Render items
+                        if (data.items && data.items.length > 0) {
+                            let itemsHtml = '';
+                            data.items.forEach(item => {
+                                const thanhTien = item.dongia * item.soluong;
+                                itemsHtml += `
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                ${item.hinhanh ? `<img src="../${item.hinhanh}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px; border-radius: 5px;">` : ''}
+                                                <span>${item.ten_thuoc}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">${item.soluong}</td>
+                                        <td class="text-end">${new Intl.NumberFormat('vi-VN').format(item.dongia)}đ</td>
+                                        <td class="text-end">${new Intl.NumberFormat('vi-VN').format(thanhTien)}đ</td>
+                                    </tr>
+                                `;
+                            });
+                            $('#orderItemsList').html(itemsHtml);
+                        }
                     } else {
                         $modalBody.html(`
                             <div class="alert alert-danger">

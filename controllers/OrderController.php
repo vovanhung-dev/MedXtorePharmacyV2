@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/InventoryController.php';
 
 class OrderController {
@@ -257,7 +258,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_details') {
+    header('Content-Type: application/json');
     $controller = new OrderController();
     $details = $controller->getOrderDetails($_GET['order_id']);
-    require __DIR__ . '/../views/admin/order-details.php';
+
+    if ($details) {
+        echo json_encode([
+            'success' => true,
+            'data' => $details['order'],
+            'items' => $details['items']
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Không tìm thấy đơn hàng'
+        ]);
+    }
+    exit;
 }

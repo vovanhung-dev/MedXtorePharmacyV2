@@ -1,7 +1,7 @@
 <?php
 include_once("../includes/config.php");
 
-// Hàm lấy dữ liệu doanh thu (chỉ tính đơn đã giao)
+// Hàm lấy dữ liệu doanh thu (tính đơn đã đặt và đã thanh toán)
 function getRevenueData($period) {
     global $conn;
 
@@ -13,7 +13,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -28,7 +28,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -44,7 +44,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND YEAR(ngay_dat) = ?
                     GROUP BY MONTH(ngay_dat)
                     ORDER BY month";

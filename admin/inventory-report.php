@@ -33,14 +33,17 @@ include('../includes/ad-sidebar.php');
 .stats-card {
     background: white;
     border-radius: 15px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
     transition: all 0.3s ease;
     overflow: hidden;
+    height: 100%;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .stats-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.3);
 }
 
 .stats-icon {
@@ -52,6 +55,7 @@ include('../includes/ad-sidebar.php');
     justify-content: center;
     font-size: 24px;
     color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .bg-gradient-primary { background: linear-gradient(135deg, #667eea, #764ba2); }
@@ -63,8 +67,9 @@ include('../includes/ad-sidebar.php');
 .table-container {
     background: white;
     border-radius: 15px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
     overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .table th {
@@ -73,19 +78,34 @@ include('../includes/ad-sidebar.php');
     font-weight: 600;
     padding: 15px;
     white-space: nowrap;
+    border: none;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.5px;
 }
 
 .table td {
     vertical-align: middle;
     padding: 12px 15px;
+    border-color: rgba(0,0,0,0.05);
+}
+
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+    transform: scale(1.01);
 }
 
 .filter-card {
     background: white;
     border-radius: 15px;
     padding: 20px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
     margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .abc-badge {
@@ -97,43 +117,76 @@ include('../includes/ad-sidebar.php');
     justify-content: center;
     font-weight: bold;
     font-size: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .chart-container {
     background: white;
     border-radius: 15px;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    padding: 25px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
     margin-bottom: 20px;
+    min-height: 450px;
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+    box-shadow: 0 5px 25px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+.chart-container h5 {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 380px;
 }
 
 .nav-pills .nav-link {
     border-radius: 10px;
     padding: 10px 20px;
     margin-right: 10px;
+    transition: all 0.3s ease;
+    color: #667eea;
+    font-weight: 500;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
 }
 
 .nav-pills .nav-link.active {
     background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .progress {
     height: 8px;
     border-radius: 4px;
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+.badge {
+    padding: 6px 12px;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+.content-wrapper h2 {
+    font-weight: 600;
+    color: #333;
 }
 </style>
 
 <div class="content-wrapper">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-chart-bar text-primary"></i> Báo Cáo Tồn Kho</h2>
-        <div>
-            <button class="btn btn-success" onclick="exportExcel()">
-                <i class="fas fa-file-excel"></i> Xuất Excel
-            </button>
-            <button class="btn btn-danger" onclick="exportPDF()">
-                <i class="fas fa-file-pdf"></i> Xuất PDF
-            </button>
-        </div>
     </div>
 
     <!-- Stats Cards -->
@@ -224,7 +277,9 @@ include('../includes/ad-sidebar.php');
                 <div class="col-md-6 mb-4">
                     <div class="chart-container">
                         <h5 class="mb-3"><i class="fas fa-chart-pie text-primary"></i> Tồn kho theo danh mục</h5>
-                        <canvas id="categoryChart" height="300"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -232,7 +287,9 @@ include('../includes/ad-sidebar.php');
                 <div class="col-md-6 mb-4">
                     <div class="chart-container">
                         <h5 class="mb-3"><i class="fas fa-chart-bar text-success"></i> Giá trị tồn kho theo danh mục</h5>
-                        <canvas id="valueChart" height="300"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="valueChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -502,9 +559,28 @@ new Chart(document.getElementById('categoryChart'), {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
-                position: 'bottom'
+                position: 'bottom',
+                labels: {
+                    padding: 15,
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += new Intl.NumberFormat('vi-VN').format(context.parsed) + ' sản phẩm';
+                        return label;
+                    }
+                }
             }
         }
     }
@@ -520,36 +596,53 @@ new Chart(document.getElementById('valueChart'), {
             data: categoryData.map(c => c.gia_tri),
             backgroundColor: 'rgba(102, 126, 234, 0.8)',
             borderColor: '#667eea',
-            borderWidth: 1
+            borderWidth: 1,
+            borderRadius: 8
         }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
                 display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Giá trị: ' + new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' đ';
+                    }
+                }
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                },
                 ticks: {
                     callback: function(value) {
                         return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+                    },
+                    font: {
+                        size: 11
+                    }
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    font: {
+                        size: 11
                     }
                 }
             }
         }
     }
 });
-
-function exportExcel() {
-    alert('Chức năng xuất Excel đang phát triển');
-}
-
-function exportPDF() {
-    alert('Chức năng xuất PDF đang phát triển');
-}
 </script>
 </body>
 </html>

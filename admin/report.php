@@ -28,8 +28,8 @@ $stmt_new_customers->bindParam(':today', $today);
 $stmt_new_customers->execute();
 $new_customers = $stmt_new_customers->fetch(PDO::FETCH_ASSOC)['total'];
 
-// Lấy tổng thu (chỉ tính đơn đã giao thành công, không tính đơn hủy)
-$sql_total_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE trangthai = 'dagiao'";
+// Lấy tổng thu (tính đơn đã đặt và đã thanh toán, không tính đơn hủy)
+$sql_total_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE trangthai IN ('dadat', 'dathanhtoan')";
 $stmt_total_revenue = $conn->prepare($sql_total_revenue);
 $stmt_total_revenue->execute();
 $total_revenue = $stmt_total_revenue->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
@@ -67,8 +67,8 @@ for($i = $selected_period - 1; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
     $chart_labels[] = date('d/m', strtotime($date));
 
-    // Chỉ tính doanh thu từ đơn đã giao thành công
-    $sql_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) = :date AND trangthai = 'dagiao'";
+    // Tính doanh thu từ đơn đã đặt và đã thanh toán
+    $sql_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) = :date AND trangthai IN ('dadat', 'dathanhtoan')";
     $stmt_revenue = $conn->prepare($sql_revenue);
     $stmt_revenue->bindParam(':date', $date);
     $stmt_revenue->execute();
@@ -76,13 +76,13 @@ for($i = $selected_period - 1; $i >= 0; $i--) {
     $chart_data[] = $revenue;
 }
 
-// Lấy thông tin top 5 sản phẩm bán chạy (chỉ tính đơn đã giao)
+// Lấy thông tin top 5 sản phẩm bán chạy (tính đơn đã đặt và đã thanh toán)
 $sql_top_products = "SELECT t.ten_thuoc, SUM(cd.soluong) AS total_sold
                     FROM chitiet_donhang cd
                     JOIN thuoc t ON cd.thuoc_id = t.id
                     JOIN donhang d ON cd.donhang_id = d.id
                     WHERE DATE(d.ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND CURDATE()
-                    AND d.trangthai = 'dagiao'
+                    AND d.trangthai IN ('dadat', 'dathanhtoan')
                     GROUP BY cd.thuoc_id, t.ten_thuoc
                     ORDER BY total_sold DESC
                     LIMIT 5";

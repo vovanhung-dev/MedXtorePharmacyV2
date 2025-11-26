@@ -19,8 +19,8 @@ if ($period == 'week') {
     $period_days = 365;
 }
 
-// Lấy dữ liệu bán hàng trong khoảng thời gian
-$sql_sales = "SELECT t.id, t.ten_thuoc, t.hinhanh, lt.ten_loai, 
+// Lấy dữ liệu bán hàng trong khoảng thời gian (tính đơn đã đặt và đã thanh toán)
+$sql_sales = "SELECT t.id, t.ten_thuoc, t.hinhanh, lt.ten_loai,
               COUNT(cd.id) AS total_sold,
               SUM(cd.dongia * cd.soluong) AS revenue
               FROM chitiet_donhang cd
@@ -28,6 +28,7 @@ $sql_sales = "SELECT t.id, t.ten_thuoc, t.hinhanh, lt.ten_loai,
               JOIN loai_thuoc lt ON t.loai_id = lt.id
               JOIN donhang d ON cd.donhang_id = d.id
               WHERE DATE(d.ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()
+              AND d.trangthai IN ('dadat', 'dathanhtoan')
               GROUP BY t.id, t.ten_thuoc, t.hinhanh, lt.ten_loai
               ORDER BY total_sold DESC";
 
@@ -36,31 +37,34 @@ $stmt_sales->bindParam(':days', $period_days, PDO::PARAM_INT);
 $stmt_sales->execute();
 $sales_data = $stmt_sales->fetchAll(PDO::FETCH_ASSOC);
 
-// Lấy tổng doanh thu trong khoảng thời gian
-$sql_total_revenue = "SELECT SUM(tongtien) AS total 
-                     FROM donhang 
-                     WHERE DATE(ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()";
+// Lấy tổng doanh thu trong khoảng thời gian (tính đơn đã đặt và đã thanh toán)
+$sql_total_revenue = "SELECT SUM(tongtien) AS total
+                     FROM donhang
+                     WHERE DATE(ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()
+                     AND trangthai IN ('dadat', 'dathanhtoan')";
 $stmt_total_revenue = $conn->prepare($sql_total_revenue);
 $stmt_total_revenue->bindParam(':days', $period_days, PDO::PARAM_INT);
 $stmt_total_revenue->execute();
 $total_revenue = $stmt_total_revenue->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-// Lấy tổng số đơn hàng trong khoảng thời gian
-$sql_total_orders = "SELECT COUNT(*) AS total 
-                    FROM donhang 
-                    WHERE DATE(ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()";
+// Lấy tổng số đơn hàng trong khoảng thời gian (tính đơn đã đặt và đã thanh toán)
+$sql_total_orders = "SELECT COUNT(*) AS total
+                    FROM donhang
+                    WHERE DATE(ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()
+                    AND trangthai IN ('dadat', 'dathanhtoan')";
 $stmt_total_orders = $conn->prepare($sql_total_orders);
 $stmt_total_orders->bindParam(':days', $period_days, PDO::PARAM_INT);
 $stmt_total_orders->execute();
 $total_orders = $stmt_total_orders->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-// Lấy dữ liệu theo loại sản phẩm (category)
+// Lấy dữ liệu theo loại sản phẩm (category) - tính đơn đã đặt và đã thanh toán
 $sql_category_sales = "SELECT lt.ten_loai, COUNT(cd.id) AS total_sold
                       FROM chitiet_donhang cd
                       JOIN thuoc t ON cd.thuoc_id = t.id
                       JOIN loai_thuoc lt ON t.loai_id = lt.id
                       JOIN donhang d ON cd.donhang_id = d.id
                       WHERE DATE(d.ngay_dat) BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY) AND CURDATE()
+                      AND d.trangthai IN ('dadat', 'dathanhtoan')
                       GROUP BY lt.ten_loai
                       ORDER BY total_sold DESC";
 
@@ -79,7 +83,8 @@ if ($period == 'week' || $period == 'month') {
         $date = date('Y-m-d', strtotime("-$i days"));
         $time_labels[] = date('d/m', strtotime($date));
         
-        $sql_day_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) = :date";
+        // Tính đơn đã đặt và đã thanh toán
+        $sql_day_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) = :date AND trangthai IN ('dadat', 'dathanhtoan')";
         $stmt_day_revenue = $conn->prepare($sql_day_revenue);
         $stmt_day_revenue->bindParam(':date', $date);
         $stmt_day_revenue->execute();
@@ -96,7 +101,8 @@ if ($period == 'week' || $period == 'month') {
         $month_start = date('Y-m-01', strtotime($month));
         $month_end = date('Y-m-t', strtotime($month));
         
-        $sql_month_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) BETWEEN :start AND :end";
+        // Tính đơn đã đặt và đã thanh toán
+        $sql_month_revenue = "SELECT SUM(tongtien) AS total FROM donhang WHERE DATE(ngay_dat) BETWEEN :start AND :end AND trangthai IN ('dadat', 'dathanhtoan')";
         $stmt_month_revenue = $conn->prepare($sql_month_revenue);
         $stmt_month_revenue->bindParam(':start', $month_start);
         $stmt_month_revenue->bindParam(':end', $month_end);

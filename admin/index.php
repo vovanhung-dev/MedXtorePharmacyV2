@@ -3,7 +3,7 @@ include_once('../includes/ad-header.php');
 include_once('../includes/ad-sidebar.php');
 include_once('../includes/config.php');
 
-// Cập nhật lại các hàm thống kê (chỉ tính đơn đã giao)
+// Cập nhật lại các hàm thống kê (tính đơn đã đặt và đã thanh toán)
 function getRevenueData($period) {
     global $conn;
 
@@ -15,7 +15,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -28,7 +28,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -41,7 +41,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = 'dagiao'
+                    WHERE trangthai IN ('dadat', 'dathanhtoan')
                     AND YEAR(ngay_dat) = ?
                     GROUP BY MONTH(ngay_dat)
                     ORDER BY month";
@@ -82,36 +82,36 @@ function getOrderStats() {
 }
 
 // Cập nhật các truy vấn thống kê doanh thu
-// Doanh thu hôm nay (chỉ tính đơn đã giao thành công)
+// Doanh thu hôm nay (tính đơn đã đặt và đã thanh toán)
 $sql = "SELECT COALESCE(SUM(tongtien), 0) as total
         FROM donhang
         WHERE DATE(ngay_dat) = CURDATE()
-        AND trangthai = 'dagiao'";
+        AND trangthai IN ('dadat', 'dathanhtoan')";
 $result = $conn->query($sql);
 $todayRevenue = $result->fetch_assoc()['total'];
 
-// Doanh thu tháng này (chỉ tính đơn đã giao)
+// Doanh thu tháng này (tính đơn đã đặt và đã thanh toán)
 $sql = "SELECT COALESCE(SUM(tongtien), 0) as total
         FROM donhang
         WHERE MONTH(ngay_dat) = MONTH(CURDATE())
         AND YEAR(ngay_dat) = YEAR(CURDATE())
-        AND trangthai = 'dagiao'";
+        AND trangthai IN ('dadat', 'dathanhtoan')";
 $result = $conn->query($sql);
 $monthRevenue = $result->fetch_assoc()['total'];
 
-// Doanh thu năm nay (chỉ tính đơn đã giao)
+// Doanh thu năm nay (tính đơn đã đặt và đã thanh toán)
 $sql = "SELECT COALESCE(SUM(tongtien), 0) as total
         FROM donhang
         WHERE YEAR(ngay_dat) = YEAR(CURDATE())
-        AND trangthai = 'dagiao'";
+        AND trangthai IN ('dadat', 'dathanhtoan')";
 $result = $conn->query($sql);
 $yearRevenue = $result->fetch_assoc()['total'];
 
 // Lấy số lượng đơn hàng theo trạng thái
 $orderStats = getOrderStats();
 
-// Lấy tổng số đơn đã giao thành công
-$sql = "SELECT COUNT(*) as total FROM donhang WHERE trangthai = 'dagiao'";
+// Lấy tổng số đơn đã đặt và đã thanh toán
+$sql = "SELECT COUNT(*) as total FROM donhang WHERE trangthai IN ('dadat', 'dathanhtoan')";
 $result = $conn->query($sql);
 $totalOrders = $result->fetch_assoc()['total'];
 
@@ -368,8 +368,8 @@ $finalOrderCountData = array_values($orderCounts);
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-primary">
                         <div class="inner">
-                            <h3><?= $orderStats['daxacnhan']['so_luong'] ?? 0 ?></h3>
-                            <p>Đã Xác Nhận</p>
+                            <h3><?= $orderStats['dadat']['so_luong'] ?? 0 ?></h3>
+                            <p>Đã Đặt</p>
                         </div>
                         <div class="icon">
                             <i class="fas fa-check-circle"></i>
@@ -540,11 +540,11 @@ document.addEventListener('DOMContentLoaded', function() {
     new Chart(orderCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'],
+            labels: ['Chờ xác nhận', 'Đã đặt', 'Đang giao', 'Đã giao', 'Đã hủy'],
             datasets: [{
                 data: [
                     <?= $orderStats['choxacnhan']['so_luong'] ?? 0 ?>,
-                    <?= $orderStats['daxacnhan']['so_luong'] ?? 0 ?>,
+                    <?= $orderStats['dadat']['so_luong'] ?? 0 ?>,
                     <?= $orderStats['danggiao']['so_luong'] ?? 0 ?>,
                     <?= $orderStats['dagiao']['so_luong'] ?? 0 ?>,
                     <?= $orderStats['dahuy']['so_luong'] ?? 0 ?>
@@ -654,7 +654,7 @@ function updateRevenueChart(chart, data, period) {
 file_put_contents('../admin/get-revenue-data.php', '<?php
 include_once("../includes/config.php");
 
-// Hàm lấy dữ liệu doanh thu (chỉ tính đơn đã giao)
+// Hàm lấy dữ liệu doanh thu (tính đơn đã đặt và đã thanh toán)
 function getRevenueData($period) {
     global $conn;
 
@@ -666,7 +666,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = \'dagiao\'
+                    WHERE trangthai IN (\'dadat\', \'dathanhtoan\')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -681,7 +681,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = \'dagiao\'
+                    WHERE trangthai IN (\'dadat\', \'dathanhtoan\')
                     AND ngay_dat BETWEEN ? AND CURDATE()
                     GROUP BY DATE(ngay_dat)
                     ORDER BY date";
@@ -697,7 +697,7 @@ function getRevenueData($period) {
                         COUNT(*) as order_count,
                         SUM(tongtien) as revenue
                     FROM donhang
-                    WHERE trangthai = \'dagiao\'
+                    WHERE trangthai IN (\'dadat\', \'dathanhtoan\')
                     AND YEAR(ngay_dat) = ?
                     GROUP BY MONTH(ngay_dat)
                     ORDER BY month";
