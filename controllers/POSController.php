@@ -967,12 +967,10 @@ class POSController {
             $searchTerm = mb_strtolower($searchTerm, 'UTF-8');
             error_log("POSController searchProducts - Lowercased term: " . $searchTerm);
 
-            // Search query - match by name, active ingredient
+            // Search query - match by name, description (hoatchat may not exist)
             $query = "SELECT
                         t.id,
                         t.ten_thuoc,
-                        t.hoatchat,
-                        t.hamluong,
                         t.hinhanh,
                         t.mota,
                         l.ten_loai,
@@ -986,7 +984,7 @@ class POSController {
                       WHERE (
                           LOWER(t.ten_thuoc) LIKE ?
                           OR LOWER(t.ten_thuoc) LIKE ?
-                          OR LOWER(t.hoatchat) LIKE ?
+                          OR LOWER(t.mota) LIKE ?
                       )";
 
             $params = [
@@ -998,12 +996,11 @@ class POSController {
             // Add dosage filter if provided
             if (!empty($dosage)) {
                 $dosage = mb_strtolower(trim($dosage), 'UTF-8');
-                $query .= " AND (LOWER(t.hamluong) LIKE ? OR LOWER(t.ten_thuoc) LIKE ?)";
-                $params[] = '%' . $dosage . '%';
+                $query .= " AND LOWER(t.ten_thuoc) LIKE ?";
                 $params[] = '%' . $dosage . '%';
             }
 
-            $query .= " GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.hamluong, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+            $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
                         ORDER BY
                             CASE
                                 WHEN LOWER(t.ten_thuoc) LIKE ? THEN 1

@@ -4,7 +4,7 @@
  * Truy cập: http://localhost:8000/api/pos/test-search.php?q=Deka%20Plus
  */
 
-header('Content-Type: application/json; charset=utf-8');
+header('Content-Type: text/html; charset=utf-8');
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -17,35 +17,42 @@ try {
     $db = new Database();
     $conn = $db->getConnection();
 
+    // Test 0: Check table structure
+    echo "0. Table structure of 'thuoc':\n";
+    $stmt = $conn->query("DESCRIBE thuoc");
+    $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($columns as $col) {
+        echo "  - {$col['Field']} ({$col['Type']})\n";
+    }
+
     // Test 1: Direct search
-    echo "1. Direct search (ten_thuoc LIKE '%$searchTerm%'):\n";
-    $stmt = $conn->prepare("SELECT id, ten_thuoc, hoatchat FROM thuoc WHERE ten_thuoc LIKE ?");
+    echo "\n1. Direct search (ten_thuoc LIKE '%$searchTerm%'):\n";
+    $stmt = $conn->prepare("SELECT id, ten_thuoc FROM thuoc WHERE ten_thuoc LIKE ?");
     $stmt->execute(['%' . $searchTerm . '%']);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo "Found: " . count($results) . " results\n";
     foreach ($results as $r) {
-        echo "  - [{$r['id']}] {$r['ten_thuoc']} | {$r['hoatchat']}\n";
+        echo "  - [{$r['id']}] {$r['ten_thuoc']}\n";
     }
 
     // Test 2: Case-insensitive search
     echo "\n2. Case-insensitive search (LOWER):\n";
     $searchLower = mb_strtolower($searchTerm, 'UTF-8');
-    $stmt = $conn->prepare("SELECT id, ten_thuoc, hoatchat FROM thuoc WHERE LOWER(ten_thuoc) LIKE LOWER(?)");
+    $stmt = $conn->prepare("SELECT id, ten_thuoc FROM thuoc WHERE LOWER(ten_thuoc) LIKE LOWER(?)");
     $stmt->execute(['%' . $searchLower . '%']);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo "Found: " . count($results) . " results\n";
     foreach ($results as $r) {
-        echo "  - [{$r['id']}] {$r['ten_thuoc']} | {$r['hoatchat']}\n";
+        echo "  - [{$r['id']}] {$r['ten_thuoc']}\n";
     }
 
     // Test 3: List all products with similar names
     echo "\n3. All products containing 'deka' (case-insensitive):\n";
-    $stmt = $conn->prepare("SELECT id, ten_thuoc, hoatchat FROM thuoc WHERE LOWER(ten_thuoc) LIKE '%deka%'");
-    $stmt->execute();
+    $stmt = $conn->query("SELECT id, ten_thuoc FROM thuoc WHERE LOWER(ten_thuoc) LIKE '%deka%'");
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo "Found: " . count($results) . " results\n";
     foreach ($results as $r) {
-        echo "  - [{$r['id']}] {$r['ten_thuoc']} | {$r['hoatchat']}\n";
+        echo "  - [{$r['id']}] {$r['ten_thuoc']}\n";
     }
 
     // Test 4: Check exact product name in database
@@ -57,17 +64,16 @@ try {
     }
 
     // Test 5: Search with stock
-    echo "\n5. Search with stock info (full query):\n";
+    echo "\n5. Search with stock info (simple query):\n";
     $query = "SELECT
                 t.id,
                 t.ten_thuoc,
-                t.hoatchat,
                 t.gia as gia_ban,
                 COALESCE(SUM(k.soluong), 0) as ton_kho
               FROM thuoc t
               LEFT JOIN khohang k ON t.id = k.thuoc_id AND k.soluong > 0
               WHERE LOWER(t.ten_thuoc) LIKE LOWER(?)
-              GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.gia
+              GROUP BY t.id, t.ten_thuoc, t.gia
               LIMIT 10";
     $stmt = $conn->prepare($query);
     $stmt->execute(['%' . $searchTerm . '%']);

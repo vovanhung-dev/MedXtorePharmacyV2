@@ -311,8 +311,6 @@ Hãy phân tích hình ảnh đơn thuốc:";
         $query = "SELECT
                     t.id,
                     t.ten_thuoc,
-                    t.hoatchat,
-                    t.hamluong,
                     t.hinhanh,
                     t.mota,
                     l.ten_loai,
@@ -327,7 +325,7 @@ Hãy phân tích hình ảnh đơn thuốc:";
                   WHERE (
                       LOWER(t.ten_thuoc) LIKE LOWER(?)
                       OR LOWER(t.ten_thuoc) LIKE LOWER(?)
-                      OR LOWER(t.hoatchat) LIKE LOWER(?)
+                      OR LOWER(t.mota) LIKE LOWER(?)
                   )";
 
         $params = [
@@ -337,12 +335,11 @@ Hãy phân tích hình ảnh đơn thuốc:";
         ];
 
         if (!empty($searchDosage)) {
-            $query .= " AND (LOWER(t.hamluong) LIKE LOWER(?) OR LOWER(t.ten_thuoc) LIKE LOWER(?))";
-            $params[] = '%' . $searchDosage . '%';
+            $query .= " AND LOWER(t.ten_thuoc) LIKE LOWER(?)";
             $params[] = '%' . $searchDosage . '%';
         }
 
-        $query .= " GROUP BY t.id, t.ten_thuoc, t.hoatchat, t.hamluong, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
+        $query .= " GROUP BY t.id, t.ten_thuoc, t.hinhanh, t.mota, l.ten_loai, t.gia, dv.ten_donvi
                     ORDER BY
                         CASE
                             WHEN LOWER(t.ten_thuoc) LIKE LOWER(?) THEN 1
@@ -396,9 +393,8 @@ Hãy phân tích hình ảnh đơn thuốc:";
     private function calculateMatchScore($prescriptionName, $prescriptionDosage, $product) {
         $score = 0;
 
-        $productName = mb_strtolower($product['ten_thuoc'], 'UTF-8');
-        $productDosage = mb_strtolower($product['hamluong'] ?? '', 'UTF-8');
-        $productIngredient = mb_strtolower($product['hoatchat'] ?? '', 'UTF-8');
+        $productName = mb_strtolower($product['ten_thuoc'] ?? '', 'UTF-8');
+        $productDescription = mb_strtolower($product['mota'] ?? '', 'UTF-8');
 
         $searchName = mb_strtolower($prescriptionName, 'UTF-8');
         $searchDosage = mb_strtolower($prescriptionDosage, 'UTF-8');
@@ -409,13 +405,12 @@ Hãy phân tích hình ảnh đơn thuốc:";
             $score += 80;
         } elseif (strpos($productName, $searchName) !== false) {
             $score += 60;
-        } elseif (strpos($productIngredient, $searchName) !== false) {
+        } elseif (strpos($productDescription, $searchName) !== false) {
             $score += 50;
         }
 
-        if (!empty($searchDosage) && !empty($productDosage)) {
-            if (strpos($productDosage, $searchDosage) !== false ||
-                strpos($productName, $searchDosage) !== false) {
+        if (!empty($searchDosage)) {
+            if (strpos($productName, $searchDosage) !== false) {
                 $score += 30;
             }
         }
