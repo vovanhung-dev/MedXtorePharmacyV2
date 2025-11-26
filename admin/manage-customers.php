@@ -178,7 +178,7 @@ include('../includes/ad-sidebar.php');
                                 <h3 class="mb-0">
                                     <?php
                                     $new_customers = array_filter($allCustomers, function($c) {
-                                        return strtotime($c['ngay_tao']) > strtotime('-30 days');
+                                        return !empty($c['ngay_tao']) && strtotime($c['ngay_tao']) > strtotime('-30 days');
                                     });
                                     echo count($new_customers);
                                     ?>
@@ -278,7 +278,7 @@ include('../includes/ad-sidebar.php');
                                     <strong><?= number_format($customer['total_spent'], 0, ',', '.') ?>đ</strong>
                                 </td>
                                 <td class="text-center">
-                                    <small><?= date('d/m/Y', strtotime($customer['ngay_tao'])) ?></small>
+                                    <small><?= !empty($customer['ngay_tao']) ? date('d/m/Y', strtotime($customer['ngay_tao'])) : 'N/A' ?></small>
                                 </td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-sm btn-info view-customer"
