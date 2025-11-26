@@ -1378,27 +1378,6 @@ $pageTitle = "POS - Bán hàng tại quầy";
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            loadProducts();
-            updateCartUI();
-
-            // Auto-search on typing (debounced)
-            let searchTimeout;
-            document.getElementById('productSearch').addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    const searchValue = document.getElementById('productSearch').value.trim();
-                    const categoryValue = document.getElementById('categoryFilter').value;
-                    loadProducts(searchValue, categoryValue);
-                }, 500);
-            });
-
-            // Filter by category
-            document.getElementById('categoryFilter').addEventListener('change', function() {
-                const searchValue = document.getElementById('productSearch').value.trim();
-                const categoryValue = document.getElementById('categoryFilter').value;
-                loadProducts(searchValue, categoryValue);
-            });
-
             // Initialize prescription scanner
             initPrescriptionScanner();
         });

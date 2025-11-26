@@ -113,15 +113,27 @@
      */
     function setupEventListeners() {
         // Search functionality
-        const searchInput = document.getElementById('product-search');
+        const searchInput = document.getElementById('productSearch');
         if (searchInput) {
+            let searchTimeout;
             searchInput.addEventListener('input', function(e) {
                 const keyword = e.target.value.trim();
-                if (keyword.length >= 2) {
-                    searchProducts(keyword);
-                } else if (keyword.length === 0) {
-                    clearSearchResults();
-                }
+                const categoryValue = document.getElementById('categoryFilter')?.value || '';
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    loadProducts(keyword, categoryValue);
+                }, 300);
+            });
+        }
+
+        // Category filter
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', function(e) {
+                const searchValue = document.getElementById('productSearch')?.value.trim() || '';
+                const categoryValue = e.target.value;
+                loadProducts(searchValue, categoryValue);
             });
         }
 
@@ -308,23 +320,38 @@
         const stockClass = stockStatus.class;
         const stockText = stockStatus.text;
 
+        // Fix image path
+        const imagePath = product.hinhanh
+            ? `/assets/images/product-images/${product.hinhanh}`
+            : '/assets/images/no-image.png';
+
         return `
-            <div class="product-card" data-product-id="${product.id}">
+            <div class="product-card" data-product-id="${product.id}" data-donvi-id="${product.donvi_id}">
                 <div class="product-image">
-                    <img src="${product.hinhanh || '/images/no-image.png'}" alt="${product.tenthuoc}">
+                    <img src="${imagePath}" alt="${product.tenthuoc}" onerror="this.src='/assets/images/no-image.png'">
                     <span class="stock-badge ${stockClass}">${stockText}</span>
                 </div>
                 <div class="product-info">
                     <h4 class="product-name">${product.tenthuoc}</h4>
                     <p class="product-code">Mã: ${product.mathuoc}</p>
-                    <div class="product-units">
-                        ${createUnitButtons(product.donvi)}
+                    <div class="product-price">
+                        <span class="price-label">${product.ten_donvi}:</span>
+                        <span class="price-value">${formatCurrency(product.gia)}</span>
+                    </div>
+                    <div class="product-stock">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Tồn kho: ${product.tonkho}</span>
                     </div>
                     <div class="product-actions">
-                        <button class="btn btn-primary add-to-cart-btn"
+                        <button class="btn btn-primary add-to-cart-btn w-100"
                                 data-product-id="${product.id}"
+                                data-donvi-id="${product.donvi_id}"
+                                data-product-name="${product.tenthuoc}"
+                                data-unit-name="${product.ten_donvi}"
+                                data-price="${product.gia}"
+                                data-image="${product.hinhanh}"
                                 ${product.tonkho <= 0 ? 'disabled' : ''}>
-                            <i class="icon-cart"></i> Thêm vào giỏ
+                            <i class="bi bi-cart-plus"></i> Thêm vào giỏ
                         </button>
                     </div>
                 </div>
