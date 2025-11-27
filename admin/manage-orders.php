@@ -466,8 +466,8 @@ include('../includes/ad-sidebar.php');
                             <tr>
                                 <td>#<?= str_pad($order['id'], 5, '0', STR_PAD_LEFT) ?></td>
                                 <td>
-                                    <div><?= htmlspecialchars($order['ten_khachhang']) ?></div>
-                                    <small class="text-muted"><?= htmlspecialchars($order['sodienthoai']) ?></small>
+                                    <div><?= htmlspecialchars($order['ten_khachhang'] ?? 'Khách lẻ') ?></div>
+                                    <small class="text-muted"><?= htmlspecialchars($order['sodienthoai'] ?? 'N/A') ?></small>
                                 </td>
                                 <td><?= date('d/m/Y H:i', strtotime($order['ngay_dat'])) ?></td>
                                 <td><?= number_format($order['tongtien'], 0, ',', '.') ?>đ</td>
