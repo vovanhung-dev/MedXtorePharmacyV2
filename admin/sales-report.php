@@ -594,9 +594,28 @@ $default_colors = ['#4e73df', '#1cc88a', '#f6c23e', '#e74a3b', '#36b9cc', '#6f42
             }, 1000);
         });
         
-        // Export to Excel button - placeholder functionality
+        // Export to Excel button
         document.getElementById('exportBtn').addEventListener('click', function() {
-            alert('Tính năng xuất Excel đang được phát triển.');
+            const period = new URLSearchParams(window.location.search).get('period') || 'month';
+            const exportUrl = '/api/admin/export-sales-report.php?period=' + period;
+
+            // Show loading
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang xuất...';
+
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Reset button after a short delay
+            setTimeout(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-file-excel me-1"></i> Xuất Excel';
+            }, 1500);
         });
     });
 </script>
